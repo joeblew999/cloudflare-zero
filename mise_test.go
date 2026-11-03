@@ -10,33 +10,66 @@ import (
 	"testing"
 )
 
-// What a mise file must be like to pass TestMise, the checker of a mise file against the Go it runs:
+// TestMise forces one structure on a mise file and the Go its tasks run, so the two can't drift apart and every task
+// runs the same on macOS, Linux and Windows. That is all it does: it checks the shape, never what the Go does.
 //
-//  1. Each task's run and usage is written on one line, "…" or '…'. Longer logic belongs in Go, not in the mise file.
-//  2. A task runs Go in one of two forms: go run|test|build ./path (Go from its source), or <binary> <command> (a
-//     built binary, its Go in <GO_CMD>/<binary>/). Anything else it runs is reported, as not checked.
-//  3. A task declares its flags and arguments with mise's usage, and its run passes each by name with mise's own
-//     templates, which mise fills in before any shell runs: {% if usage.yes %} --yes{% endif %}. Nothing passes
-//     through undeclared, nothing is read the deprecated way, {{flag(…)}}, and no run line has POSIX shell syntax
-//     (${…}, $name, NAME=value in front of a command): Windows' cmd doesn't read it, so the task would break there.
-//  4. A binary's commands are laid out one way, which the caller says: a file each, <command>.go holding the function
-//     named for it, or a folder each.
-//  5. Go that runs tasks names each in full, "namespace:task", never glued together from pieces.
+// Three sides, each checked against the others:
 //
-// It checks both ways: what the mise file names must be in the Go, and what the Go has must be in the mise file.
-
-// TestMise checks a mise file against Go, and only Go, both ways, by the base rule. It knows nothing of this repo: the
-// root's task that runs it says what to check, as mise run template:check-mise does:
+//   - the mise file, the interface: each task is one line that runs something, with the flags and arguments it takes
+//     declared in its usage;
+//   - the Go its tasks run;
+//   - Go that runs the tasks by name, an end-to-end test say (optional, GO_CALLERS).
 //
-//	MISE_FILE   the mise file (without it, TestMise skips)
-//	GO_CMD      the folder of the Go binaries its tasks run, <GO_CMD>/<binary>/   } both, for tasks that run a
-//	GO_LAYOUT   how a binary's commands are laid out: file or folder               } built binary, or neither
-//	GO_CALLERS  the folder of Go that runs its tasks by name (optional)
+// Used here, it holds a loop that runs both ways, mise to Go and back, several levels deep: the root's mise.toml runs
+// Go tests (mise run template:e2e-serve runs TestWalk), which run the template's tasks by name (cloudflare:06-serve),
+// which run the tool's Go (mise-cloudflare serve, cmd/mise-cloudflare/serve.go). A task of each mise file runs
+// TestMise on it, even on the file that holds that task: root:check-mise checks the mise.toml it's in, and
+// template:check-mise checks the template's tasks against the Go they run and against the end-to-end Go that runs
+// them, so every link is checked in both directions.
 //
-// The mise side reads any mise file; the other side reads only Go: .go files, <GO_CMD>/<binary>/, Go's flag package. A
-// task runs Go in one of two forms (runsOf); anything else it runs is reported as not checked, never passed over. What
-// it can't read, a run or a usage that isn't one line, fails: a proper mise file is written so it can be read. It
-// never passes on nothing, and it logs what it checked.
+// It doesn't prescribe one way to lay things out; it accepts many and holds whichever a repo picks to it. Each command
+// of a task's run line (they can be joined by &&, || and ;) is read on its own:
+//
+//   - Go from its source: go run, go test or go build, on a folder (./cmd/mise-cloudflare), several, a whole tree
+//     (./...), or none, the folder the task runs in. Each folder must hold Go; nothing else is asked of its layout,
+//     so a binary that is one main.go fits as it is.
+//   - A built binary of GO_CMD: <binary> <command>, or <binary> alone for its main.go. Its commands are laid out the
+//     way GO_LAYOUT says: file, a file each, <GO_CMD>/<binary>/<command>.go (dashes as underscores) holding the
+//     function named for it (set_secrets.go, setSecrets); or folder, a folder each, <GO_CMD>/<binary>/<command>/.
+//     Code the commands share isn't a command and is left alone. This is the strictest: every command a task runs
+//     must be there, every command must be one a task runs, and every flag must be declared on both sides, in the
+//     usage of the tasks running the binary and in its Go (flag.Bool("yes", …)).
+//   - Anything else (hugo …, wrangler …, go vet …): logged as not checked, never failed.
+//
+// The tasks can be in a mise.toml ([tasks.…]) or in a file of tasks only (.mise/tasks/*.toml, or one a mise.toml
+// includes); GO_CMD and GO_CALLERS are each optional, so a repo checks as much as it has. Only a mise file whose tasks
+// run no Go at all fails outright: there would be nothing to keep in sync.
+//
+// Every task, however it runs Go:
+//
+//   - its run and its usage are each one line, "…" or '…': longer logic belongs in Go, not in the mise file. One it
+//     can't read fails, rather than being skipped;
+//   - it declares the flags and arguments it takes in mise's usage, and its run passes each by name with mise's own
+//     templates, which mise fills in before any shell runs: {% if usage.yes %} --yes{% endif %}, "{{usage.branch}}".
+//     Everything declared is passed, nothing passed is undeclared, and nothing is read mise's deprecated way,
+//     {{flag(…)}};
+//   - its run has no POSIX shell syntax (${…}, $name, NAME=value in front of a command), which Windows' cmd doesn't
+//     read: variables go in the task's env.
+//
+// Go that runs tasks (GO_CALLERS) names each in full, "namespace:task", and every name must be a task of the mise
+// file. A name glued together from pieces (the namespace's string plus a variable) can't be checked, so it fails, and
+// so does a folder of callers that names no task at all.
+//
+// It knows nothing of any repo. The task that runs it says what to check, as mise run template:check-mise does here:
+//
+//	MISE_FILE   the mise file (without it, TestMise skips). Its tasks run in its own folder, or, for a
+//	            .mise/tasks/*.toml, in the project's root; a task's ./path is read from there
+//	GO_CMD      the folder of the built binaries, <GO_CMD>/<binary>/   } for built binaries: both, or neither
+//	GO_LAYOUT   file or folder: how a binary's commands are laid out    }
+//	GO_CALLERS  the folder of Go that runs the tasks by name (optional)
+//
+// On the Go side it reads only Go: .go files and Go's flag package. It never passes on nothing, and it logs what it
+// checked.
 func TestMise(t *testing.T) {
 	file, cmd, layout, callers := os.Getenv("MISE_FILE"), os.Getenv("GO_CMD"), os.Getenv("GO_LAYOUT"), os.Getenv("GO_CALLERS")
 	if file == "" {
