@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	token    = regexp.MustCompile(`CLOUDFLARE_API_TOKEN\s*[=:]\s*["']?[A-Za-z0-9_-]{30,}`)
+	token    = regexp.MustCompile(`(CLOUDFLARE|CF)_API_(TOKEN|KEY)\s*[=:]\s*["']?[A-Za-z0-9_-]{30,}`)
 	login    = regexp.MustCompile(`\bwrangler\s+login\b`)
 	exactPin = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
 )

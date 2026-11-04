@@ -40,13 +40,30 @@ func TestSkill(t *testing.T) {
 	}
 }
 
-// TestTokenEnvFiles: a .env or .env.* with CLOUDFLARE_API_TOKEN set is found; an empty one or a comment isn't.
+// TestTokenEnvFiles: a .env or .env.* setting a token or key wrangler reads is found, under its old name too
+// (CF_API_TOKEN); an empty one, a comment, or one named so wrangler doesn't read it isn't.
 func TestTokenEnvFiles(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, ".env"), []byte("A=1\nCLOUDFLARE_API_TOKEN=abc\n"), 0o600)
-	os.WriteFile(filepath.Join(dir, ".env.local"), []byte("CLOUDFLARE_API_TOKEN=\n# CLOUDFLARE_API_TOKEN=x\n"), 0o600)
-	if got := tokenEnvFiles(dir); !slices.Equal(got, []string{".env"}) {
+	os.WriteFile(filepath.Join(dir, ".env.local"), []byte("CLOUDFLARE_API_TOKEN=\n# CLOUDFLARE_API_TOKEN=x\nMY_CF_TOKEN=x\n"), 0o600)
+	os.WriteFile(filepath.Join(dir, ".env.old"), []byte("CF_API_TOKEN=abc\n"), 0o600)
+	os.WriteFile(filepath.Join(dir, ".env.key"), []byte("CLOUDFLARE_API_KEY=abc\n"), 0o600)
+	if got := tokenEnvFiles(dir); !slices.Equal(got, []string{".env", ".env.key", ".env.old"}) {
 		t.Errorf("got %q", got)
+	}
+}
+
+// TestStrayInShell: each token or key wrangler reads, set in the shell, is named; none set, none is.
+func TestStrayInShell(t *testing.T) {
+	for _, v := range strayVars {
+		t.Setenv(v, "")
+	}
+	if got := strayInShell(); got != "" {
+		t.Errorf("none set: %q", got)
+	}
+	t.Setenv("CF_API_TOKEN", "x")
+	if got := strayInShell(); got != "CF_API_TOKEN" {
+		t.Errorf("CF_API_TOKEN set: %q", got)
 	}
 }
 

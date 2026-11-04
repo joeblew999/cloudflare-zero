@@ -80,20 +80,35 @@ func (r repo) noProfiles(ctx context.Context) []string {
 	return []string{fmt.Sprintf("the repo's wrangler, %s, has no auth profiles (wrangler auth), which this repo's login is: move it to a newer one (mise run cloudflare:update moves every pin), then this again", r.w.Version())}
 }
 
-// refuseStrayTokens: a CLOUDFLARE_API_TOKEN beats every login, so outside CI one in the shell or in a .env is refused.
+// strayVars are what wrangler takes over any login: an API token, CLOUDFLARE_API_TOKEN or CF_API_TOKEN (its old name,
+// which it still reads), or the Global API Key, CLOUDFLARE_API_KEY or CF_API_KEY.
+var strayVars = []string{"CLOUDFLARE_API_TOKEN", "CF_API_TOKEN", "CLOUDFLARE_API_KEY", "CF_API_KEY"}
+
+// strayInShell is the first of strayVars set in this shell, or "".
+func strayInShell() string {
+	for _, v := range strayVars {
+		if os.Getenv(v) != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+// refuseStrayTokens: a token or key wrangler reads (strayVars) beats every login, so outside CI one in the shell or in
+// a .env is refused.
 func (r repo) refuseStrayTokens() {
 	if inCI() {
 		return
 	}
-	if os.Getenv("CLOUDFLARE_API_TOKEN") != "" {
-		fail(fmt.Errorf("refusing: CLOUDFLARE_API_TOKEN is set in this shell, and it would override this repo's own login (%s). Unset it and run again", r.w.Profile))
+	if v := strayInShell(); v != "" {
+		fail(fmt.Errorf("refusing: %s is set in this shell, and it would override this repo's own login (%s). Unset it and run again", v, r.w.Profile))
 	}
 	if files := tokenEnvFiles(r.dir); len(files) > 0 {
-		fail(fmt.Errorf("refusing: %s sets CLOUDFLARE_API_TOKEN, and wrangler would use it instead of this repo's own login (%s). Remove it and run again", strings.Join(files, " "), r.w.Profile))
+		fail(fmt.Errorf("refusing: %s sets a Cloudflare token or key (%s), and wrangler would use it instead of this repo's own login (%s). Remove it, or name it so wrangler doesn't read it, and run again", strings.Join(files, " "), strings.Join(strayVars, ", "), r.w.Profile))
 	}
 }
 
-var tokenLine = regexp.MustCompile(`(?m)^CLOUDFLARE_API_TOKEN=.`)
+var tokenLine = regexp.MustCompile(`(?m)^(CLOUDFLARE|CF)_API_(TOKEN|KEY)=.`)
 
 func tokenEnvFiles(dir string) []string {
 	matches, _ := filepath.Glob(filepath.Join(dir, ".env*"))

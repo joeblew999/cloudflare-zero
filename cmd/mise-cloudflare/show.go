@@ -45,7 +45,7 @@ type statusReport struct {
 func (r repo) show(ctx context.Context, jsonOut bool) {
 	rep := statusReport{Worker: r.wc.Name, Profile: r.w.Profile, CompatibilityDate: r.wc.CompatibilityDate, DevDate: r.wc.DevDate, Remote: append([]string{}, r.wc.Remote...), Build: rules.Build(r.dir), Accounts: []wrangler.Account{}, Scopes: []string{},
 		Needs: r.wanted(ctx), StrayTokens: tokenEnvFiles(r.dir), Problems: []string{}}
-	if os.Getenv("CLOUDFLARE_API_TOKEN") != "" {
+	if strayInShell() != "" {
 		rep.StrayTokens = append([]string{"this shell"}, rep.StrayTokens...)
 	}
 	// cloudflare check's problems come before deploying: it fails on them, or leaks the login or a secret.
@@ -97,7 +97,7 @@ func (r repo) show(ctx context.Context, jsonOut bool) {
 	}
 	switch {
 	case len(rep.StrayTokens) > 0:
-		rep.Next = "remove the CLOUDFLARE_API_TOKEN in " + strings.Join(rep.StrayTokens, " and ") + ": it would override the repo's login"
+		rep.Next = "remove the Cloudflare token or key (" + strings.Join(strayVars, ", ") + ") in " + strings.Join(rep.StrayTokens, " and ") + ": it would override the repo's login"
 	case len(rep.Problems) > 0:
 		rep.Next = "fix what mise run cloudflare:04-check lists, first: " + rep.Problems[0]
 	case len(rep.Secrets) > 0:

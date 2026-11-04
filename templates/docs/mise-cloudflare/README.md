@@ -158,8 +158,10 @@ file: each choice is a command's flag, kept by Cloudflare's Workers Builds setup
 | **Cloudflare's build token** | Cloudflare's own, which never leaves Cloudflare | Cloudflare deploying every push |
 
 There's no API token anywhere, and the Cloudflare Global API Key is never used. A running Worker uses none of these:
-Cloudflare connects its bindings itself. A `CLOUDFLARE_API_TOKEN` in your shell or a `.env` would beat every login
-(wrangler uses it, silently, instead), so the commands refuse one.
+Cloudflare connects its bindings itself. A token or key wrangler reads, in your shell or a `.env`, would beat every
+login (wrangler uses it, silently, instead): `CLOUDFLARE_API_TOKEN`, `CF_API_TOKEN` (its old name, still read),
+`CLOUDFLARE_API_KEY` or `CF_API_KEY`. So the commands refuse one; a token your own tools need goes under a name
+wrangler doesn't read.
 
 The repo's login:
 
@@ -218,8 +220,8 @@ there to click Allow, and Cloudflare's Workers Builds deploys.
 
 | Message | What to do |
 |---|---|
-| `refusing: CLOUDFLARE_API_TOKEN is set in this shell` | Unset it: a token overrides every login, and the repo uses none |
-| `refusing: .env sets CLOUDFLARE_API_TOKEN` | Remove that line from the file |
+| `refusing: CLOUDFLARE_API_TOKEN is set in this shell` (or `CF_API_TOKEN`, a key) | Unset it: a token overrides every login, and the repo uses none |
+| `refusing: .env sets a Cloudflare token or key` | Remove that line from the file, or name it so wrangler doesn't read it |
 | `wrangler isn't installed here` | Install the repo's dependencies: `package.json` pins wrangler |
 | `npm warn install-scripts` (npm 11) | npm holds back packages' install scripts until you approve them (`npm install-scripts ls`); wrangler ran without its own (workerd's, esbuild's), dev and deploy both |
 | `the repo's wrangler, … has no auth profiles` | An older wrangler (4.49.0 is one) can't hold the repo's login: move it to a newer one, `mise run cloudflare:update` (it moves every pin; `mise use aube` first if it says so). `06-serve` still runs local bindings on it |
