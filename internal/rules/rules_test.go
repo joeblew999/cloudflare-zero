@@ -131,25 +131,24 @@ func TestLockfile(t *testing.T) {
 	if p, err := Check(worker, cfg()); err != nil || strings.Contains(strings.Join(p, "\n"), "wrangler is") {
 		t.Errorf("a ^ range with a committed lockfile is pinned: %q, %v", p, err)
 	}
-	aube := repo(t, map[string]string{"aube-lock.yaml": "lockfileVersion: '9.0'\n", "package.json": `{ "devDependencies": { "wrangler": "^4.0.0" } }`})
-	exec.Command("git", "-C", aube, "add", "aube-lock.yaml").Run()
-	if f, install := Lockfile(aube); filepath.Base(f) != "aube-lock.yaml" || install != "aube install --frozen-lockfile" {
-		t.Errorf("a committed aube-lock.yaml: %q, %q", f, install)
-	}
 }
 
-// TestInBuildImage: aube, which Workers Builds' image doesn't have, runs there from npm, at the repo's pin; the other
-// package managers are there already.
-func TestInBuildImage(t *testing.T) {
-	for _, tc := range []struct{ cmd, version, want string }{
-		{"aube install --frozen-lockfile && aube run build", "2.9.0", "npx -y --ignore-scripts=false @endevco/aube@2.9.0 install --frozen-lockfile && npx -y --ignore-scripts=false @endevco/aube@2.9.0 run build"},
-		{"aube install --frozen-lockfile", "", "npx -y --ignore-scripts=false @endevco/aube install --frozen-lockfile"},
-		{"pnpm install --frozen-lockfile && pnpm run build", "2.9.0", "pnpm install --frozen-lockfile && pnpm run build"},
-		{"npm ci", "", "npm ci"},
-	} {
-		if got := InBuildImage(tc.cmd, tc.version); got != tc.want {
-			t.Errorf("InBuildImage(%q, %q) = %q, want %q", tc.cmd, tc.version, got, tc.want)
-		}
+// TestAubeLock: a committed aube-lock.yaml, which Workers Builds doesn't read, is a problem that says to keep the
+// lockfile in pnpm's format; a pnpm-lock.yaml (aube writes it in place) isn't.
+func TestAubeLock(t *testing.T) {
+	files := good()
+	files["aube-lock.yaml"] = "lockfileVersion: '9.0'\n"
+	dir := repo(t, files)
+	exec.Command("git", "-C", dir, "add", "aube-lock.yaml").Run()
+	if p, err := Check(dir, cfg()); err != nil || !strings.Contains(strings.Join(p, "\n"), "default-lockfile-format=pnpm") {
+		t.Errorf("a committed aube-lock.yaml: %q, %v", p, err)
+	}
+	files = good()
+	files["pnpm-lock.yaml"] = "lockfileVersion: '9.0'\n"
+	dir = repo(t, files)
+	exec.Command("git", "-C", dir, "add", "pnpm-lock.yaml").Run()
+	if p, err := Check(dir, cfg()); err != nil || strings.Contains(strings.Join(p, "\n"), "aube-lock") {
+		t.Errorf("a committed pnpm-lock.yaml: %q, %v", p, err)
 	}
 }
 
@@ -166,10 +165,5 @@ func TestBuild(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts": {"build": "vite build", "deploy": "npm run build && wrangler deploy"}}`), 0o644)
 	if got := Build(dir); got != "npm run build" {
 		t.Errorf("a build script: %q, want npm run build", got)
-	}
-	aube := repo(t, map[string]string{"aube-lock.yaml": "lockfileVersion: '9.0'\n", "package.json": `{"scripts": {"build": "hugo"}}`})
-	exec.Command("git", "-C", aube, "add", "aube-lock.yaml").Run()
-	if got := Build(aube); got != "aube run build" {
-		t.Errorf("a build script with aube-lock.yaml: %q, want aube run build", got)
 	}
 }

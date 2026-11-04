@@ -44,7 +44,7 @@ run = 'mise-cloudflare deploy{% for a in usage.args %} "{{a}}"{% endfor %}'
 description = "09. Cloudflare deploys every push: a preview for every pull request, then production (--staging main for staging, --off to stop)"
 tools = { "npm:cf" = "1.0.0-beta.26", gh = "2.103.0" }
 usage = 'flag "--off" help="turn it off: the Workers Builds setup and the previews resources deleted"; flag "--branch <branch>" help="the branch whose pushes deploy production (default the default branch of the repository, or production with --staging)"; flag "--staging <branch>" help="a staging branch, whose pushes deploy the wrangler environment env.staging"; flag "--build <command>" help="the build command (default installing from the lockfile: npm ci, …)"; flag "--json" help="one JSON document on stdout, instead of text"'
-run = 'mise-cloudflare connect-github{% if usage.off %} --off{% endif %}{% if usage.branch %} --branch "{{usage.branch}}"{% endif %}{% if usage.staging %} --staging "{{usage.staging}}"{% endif %}{% if usage.build %} --build "{{usage.build}}"{% endif %}{% if usage.json %} --json{% endif %}'
+run = 'mise-cloudflare connect-github{% if usage.off %} --off{% endif %}{% if usage.branch %} --branch "{{usage.branch}}"{% endif %}{% if usage.staging %} --staging "{{usage.staging}}"{% endif %}{% if usage.build %} --build {% if os() == "windows" %}"{{usage.build}}"{% else %}{{usage.build | quote}}{% endif %}{% endif %}{% if usage.json %} --json{% endif %}'
 
 ["cloudflare:10-set-preview-secrets"]
 description = "10. The secrets the Worker's previews require, which they don't inherit, in its Previews Base: it asks for each"

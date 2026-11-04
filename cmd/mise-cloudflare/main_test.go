@@ -67,6 +67,17 @@ func TestStrayInShell(t *testing.T) {
 	}
 }
 
+// TestPipedLines: piped values are read whole, a line each, without their line endings (\r\n too), a last line with none
+// included.
+func TestPipedLines(t *testing.T) {
+	if got := pipedLines(strings.NewReader("one\r\ntwo\nthree")); !slices.Equal(got, []string{"one", "two", "three"}) {
+		t.Errorf("got %q", got)
+	}
+	if got := pipedLines(strings.NewReader("")); len(got) != 0 {
+		t.Errorf("nothing piped: %q", got)
+	}
+}
+
 // TestCI: CI=true is CI; unset, false or 0 isn't.
 func TestCI(t *testing.T) {
 	for v, want := range map[string]bool{"true": true, "1": true, "": false, "false": false, "0": false} {

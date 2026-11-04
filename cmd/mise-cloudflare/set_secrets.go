@@ -1,10 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"slices"
 	"strings"
@@ -14,8 +14,14 @@ import (
 
 // setSecrets sets each secret the Worker requires (its config's secrets.required) that Cloudflare doesn't have yet,
 // asking for its value; with previews, each one the Worker's Previews Base doesn't have, which every preview starts
-// from (previews don't inherit the Worker's). A value is typed unseen on a terminal, else read a line each from stdin.
+// from (previews don't inherit the Worker's). A value is typed unseen on a terminal, else read a line each from stdin,
+// all of it read first, before any wrangler runs: one that inherits stdin would take the values otherwise.
 func (r repo) setSecrets(ctx context.Context, previews bool) {
+	tty := term.IsTerminal(int(os.Stdin.Fd()))
+	var piped []string
+	if !tty {
+		piped = pipedLines(os.Stdin)
+	}
 	who := r.ensureLogin(ctx)
 	where, whose, put := r.wc.Name, r.wc.Name+"'s", []string{"secret", "put"}
 	var missing []string
@@ -44,7 +50,6 @@ func (r repo) setSecrets(ctx context.Context, previews bool) {
 		fmt.Printf("✓ %s has every secret it requires\n", where)
 		return
 	}
-	tty, in := term.IsTerminal(int(os.Stdin.Fd())), bufio.NewReader(os.Stdin)
 	for _, name := range missing {
 		var value string
 		if tty {
@@ -53,9 +58,8 @@ func (r repo) setSecrets(ctx context.Context, previews bool) {
 			fmt.Fprintln(os.Stderr)
 			must(err)
 			value = string(b)
-		} else {
-			line, _ := in.ReadString('\n')
-			value = strings.TrimRight(line, "\r\n")
+		} else if len(piped) > 0 {
+			value, piped = piped[0], piped[1:]
 		}
 		if value == "" {
 			fail(fmt.Errorf("no value for %s %s", whose, name))
@@ -67,4 +71,14 @@ func (r repo) setSecrets(ctx context.Context, previews bool) {
 		}
 		fmt.Printf("✓ %s %s is set\n", whose, name)
 	}
+}
+
+// pipedLines are the lines piped to r, each without its line ending.
+func pipedLines(r io.Reader) []string {
+	b, _ := io.ReadAll(r)
+	var lines []string
+	for line := range strings.Lines(string(b)) {
+		lines = append(lines, strings.TrimRight(line, "\r\n"))
+	}
+	return lines
 }

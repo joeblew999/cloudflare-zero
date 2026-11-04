@@ -16,7 +16,7 @@ import (
 )
 
 // workerConfigs are the files that make a folder a Worker's, whatever else it has: its wrangler config first.
-var workerConfigs = []string{"wrangler.jsonc", "wrangler.json", "wrangler.toml", "package.json", "aube-lock.yaml", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb"}
+var workerConfigs = []string{"wrangler.jsonc", "wrangler.json", "wrangler.toml", "package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb"}
 
 // templateRepo writes the template's own Worker into a repo that has none: its code, its wrangler.jsonc and
 // package.json under a name of the repo's own (its folder's), the lockfile, .dev.vars.example, and the mise.toml that
