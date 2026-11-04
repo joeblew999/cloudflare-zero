@@ -144,6 +144,23 @@ func Lockfile(dir string) (file, install string) {
 	return "", "npm install"
 }
 
+// InBuildImage is cmd (an install, a build, joined by &&) as it runs on Workers Builds' image, which has npm, pnpm,
+// yarn and bun but no aube: there aube is npm's @endevco/aube, at aubeVersion (the repo's pin, mise current aube) when
+// there is one. Its install fetches its binary, so its scripts must run (--ignore-scripts=false).
+func InBuildImage(cmd, aubeVersion string) string {
+	pkg := "@endevco/aube"
+	if aubeVersion != "" {
+		pkg += "@" + aubeVersion
+	}
+	parts := strings.Split(cmd, " && ")
+	for i, p := range parts {
+		if rest, ok := strings.CutPrefix(p, "aube "); ok {
+			parts[i] = "npx -y --ignore-scripts=false " + pkg + " " + rest
+		}
+	}
+	return strings.Join(parts, " && ")
+}
+
 // Build is the command that runs the package's own build script (package.json's "build", in dir), with the package
 // manager its lockfile is for (npm run build, pnpm run build, …), or "" when it has none. A Worker built first
 // (Cloudflare's Vite plugin writes the config wrangler then deploys, its own deploy script being "npm run build &&

@@ -138,6 +138,21 @@ func TestLockfile(t *testing.T) {
 	}
 }
 
+// TestInBuildImage: aube, which Workers Builds' image doesn't have, runs there from npm, at the repo's pin; the other
+// package managers are there already.
+func TestInBuildImage(t *testing.T) {
+	for _, tc := range []struct{ cmd, version, want string }{
+		{"aube install --frozen-lockfile && aube run build", "2.9.0", "npx -y --ignore-scripts=false @endevco/aube@2.9.0 install --frozen-lockfile && npx -y --ignore-scripts=false @endevco/aube@2.9.0 run build"},
+		{"aube install --frozen-lockfile", "", "npx -y --ignore-scripts=false @endevco/aube install --frozen-lockfile"},
+		{"pnpm install --frozen-lockfile && pnpm run build", "2.9.0", "pnpm install --frozen-lockfile && pnpm run build"},
+		{"npm ci", "", "npm ci"},
+	} {
+		if got := InBuildImage(tc.cmd, tc.version); got != tc.want {
+			t.Errorf("InBuildImage(%q, %q) = %q, want %q", tc.cmd, tc.version, got, tc.want)
+		}
+	}
+}
+
 // TestBuild: a package with a build script is built with its package manager first; one with none, or no package, isn't.
 func TestBuild(t *testing.T) {
 	dir := t.TempDir()

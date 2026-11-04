@@ -152,7 +152,8 @@ func (r repo) connectGithub(ctx context.Context, b builds, off, jsonOut bool) {
 	if run := rules.Build(r.dir); run != "" {
 		install += " && " + run // the package's own build, before wrangler deploys what it writes
 	}
-	rep.Build = orDefault(b.Build, install)
+	aube, _ := exec.CommandContext(ctx, "mise", "current", "aube").Output() // the repo's aube pin, for Workers Builds' npx
+	rep.Build = orDefault(b.Build, rules.InBuildImage(install, strings.TrimSpace(string(aube))))
 	prodBranch := gh.DefaultBranch
 	if b.Staging != "" {
 		prodBranch = "production"
