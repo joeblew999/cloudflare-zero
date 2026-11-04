@@ -5,7 +5,7 @@ go 1.26.0
 toolchain go1.27.3
 
 require (
-	github.com/joeblew999/mise-check v0.1.0
+	github.com/joeblew999/mise-check v0.3.1
 	golang.org/x/term v0.47.0
 )
 

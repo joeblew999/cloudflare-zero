@@ -131,6 +131,11 @@ func TestLockfile(t *testing.T) {
 	if p, err := Check(worker, cfg()); err != nil || strings.Contains(strings.Join(p, "\n"), "wrangler is") {
 		t.Errorf("a ^ range with a committed lockfile is pinned: %q, %v", p, err)
 	}
+	aube := repo(t, map[string]string{"aube-lock.yaml": "lockfileVersion: '9.0'\n", "package.json": `{ "devDependencies": { "wrangler": "^4.0.0" } }`})
+	exec.Command("git", "-C", aube, "add", "aube-lock.yaml").Run()
+	if f, install := Lockfile(aube); filepath.Base(f) != "aube-lock.yaml" || install != "aube install --frozen-lockfile" {
+		t.Errorf("a committed aube-lock.yaml: %q, %q", f, install)
+	}
 }
 
 // TestBuild: a package with a build script is built with its package manager first; one with none, or no package, isn't.
@@ -146,5 +151,10 @@ func TestBuild(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts": {"build": "vite build", "deploy": "npm run build && wrangler deploy"}}`), 0o644)
 	if got := Build(dir); got != "npm run build" {
 		t.Errorf("a build script: %q, want npm run build", got)
+	}
+	aube := repo(t, map[string]string{"aube-lock.yaml": "lockfileVersion: '9.0'\n", "package.json": `{"scripts": {"build": "hugo"}}`})
+	exec.Command("git", "-C", aube, "add", "aube-lock.yaml").Run()
+	if got := Build(aube); got != "aube run build" {
+		t.Errorf("a build script with aube-lock.yaml: %q, want aube run build", got)
 	}
 }

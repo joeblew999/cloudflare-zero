@@ -120,8 +120,10 @@ func EnsureIgnored(dir, f string) error {
 	return nil
 }
 
-// lockfiles is each package manager's lockfile and how Workers Builds installs from it.
+// lockfiles is each package manager's lockfile and how Workers Builds installs from it. aube's own, aube-lock.yaml,
+// comes first: aube reads and writes every other kind in place, and a repo that has its own uses aube.
 var lockfiles = []struct{ file, install string }{
+	{"aube-lock.yaml", "aube install --frozen-lockfile"},
 	{"pnpm-lock.yaml", "pnpm install --frozen-lockfile"},
 	{"bun.lock", "bun install --frozen-lockfile"},
 	{"bun.lockb", "bun install --frozen-lockfile"},
