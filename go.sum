@@ -1,7 +1,5 @@
-github.com/joeblew999/mise-check v0.3.1 h1:K+I3+x8r20kRR4o499bIPQRcjMeC7gZnitGzh5OsVsw=
-github.com/joeblew999/mise-check v0.3.1/go.mod h1:qN61wvn6gqiZ5DpGfhI0NeMEc0PzZtWo+acDMgVljQE=
-github.com/joeblew999/mise-check v0.4.0 h1:KA0KDigr32AU3V6F4pUvsl1CZpybQn1Isxq9o0c8RYY=
-github.com/joeblew999/mise-check v0.4.0/go.mod h1:VH7P8zbI09D6BxlpSJILplQN5Qff1f6I1Lvs6W2WR9w=
+github.com/joeblew999/mise-check v0.4.13 h1:5BFd/r0/WW8Z6mdLZPZ3n2jrGxCGvHV36ZLFzLL9bmk=
+github.com/joeblew999/mise-check v0.4.13/go.mod h1:qN61wvn6gqiZ5DpGfhI0NeMEc0PzZtWo+acDMgVljQE=
 golang.org/x/sys v0.49.0 h1:XbzkgYJHdqh/8m2Uu0W/dQv8nktxx4BFHp1M0gROTXA=
 golang.org/x/sys v0.49.0/go.mod h1:hNLxWAXmnKAxqDtdwIYC4bM9oQPEecfsnNMuSxOs3og=
 golang.org/x/term v0.47.0 h1:cpyOwQkr2Nzxe2p6KnrTG7Ei2wtzjsuSjhpXXepZ/BM=

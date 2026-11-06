@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io/fs"
-	"maps"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -85,54 +83,6 @@ func TestCI(t *testing.T) {
 		if inCI() != want {
 			t.Errorf("CI=%q: %v", v, !want)
 		}
-	}
-}
-
-// TestMoved: update ends with every pin it read, the moved ones before → after, in the order of their file and name.
-func TestMoved(t *testing.T) {
-	before := map[string]string{"mise.toml node": "26.12.1", "mise.toml aube": "2.8.4", "package.json wrangler": "4.151.3", "go.mod example.com/old": "v1.0.0",
-		"package.json typescript": "^5.5.2", "package.json esbuild": "^0.19.0"}
-	after := map[string]string{"mise.toml node": "26.13.0", "mise.toml aube": "2.8.4", "package.json wrangler": "4.155.0", "go.mod example.com/new": "v2.0.0",
-		"package.json typescript": "^7.0.2", "package.json esbuild": "^0.28.2"}
-	lines, n := moved(before, after)
-	want := []string{
-		"example.com/new none → v2.0.0 (go.mod)",
-		"example.com/old v1.0.0 → none (go.mod)",
-		"aube 2.8.4 (mise.toml)",
-		"node 26.12.1 → 26.13.0 (mise.toml)",
-		"esbuild ^0.19.0 → ^0.28.2 (package.json), a major move",
-		"typescript ^5.5.2 → ^7.0.2 (package.json), a major move",
-		"wrangler 4.151.3 → 4.155.0 (package.json)",
-	}
-	if !slices.Equal(lines, want) || n != 6 {
-		t.Errorf("moved: %d\n%q\nwant 6\n%q", n, lines, want)
-	}
-}
-
-// TestOwnMise: update reads the repo's own pins and no parent folder's, also when the repo's path goes through a link
-// (/tmp and /var are /private/… on macOS: mise only stops at a ceiling given as the real path), and a pin that isn't
-// installed yet is a pin too.
-func TestOwnMise(t *testing.T) {
-	if _, err := exec.LookPath("mise"); err != nil {
-		t.Skip("no mise")
-	}
-	real, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
-	// jq and yq are only labels, never installed or run: a parent folder's pin (jq) and the repo's own (yq), so which
-	// one mise reports shows which file it read. They're real tool names because mise refuses a tool it doesn't know.
-	os.WriteFile(filepath.Join(real, "mise.toml"), []byte("[tools]\njq = \"1.8.2\"\n"), 0o644)
-	os.Mkdir(filepath.Join(real, "repo"), 0o755)
-	os.WriteFile(filepath.Join(real, "repo", "mise.toml"), []byte("[tools]\nyq = \"4.44.1\"\n"), 0o644) // not installed here
-	link := filepath.Join(t.TempDir(), "link")
-	if err := os.Symlink(real, link); err != nil {
-		t.Skip(err)
-	}
-	t.Setenv("MISE_TRUSTED_CONFIG_PATHS", strings.Join([]string{real, longPath(real), link}, string(os.PathListSeparator)))
-	got := repo{dir: filepath.Join(link, "repo")}.pins(context.Background())
-	if want := map[string]string{"mise.toml yq": "4.44.1"}; !maps.Equal(got, want) {
-		t.Errorf("a repo through a link, its yq not installed: pins %v, want %v (its own, not its parent folder's jq)", got, want)
 	}
 }
 

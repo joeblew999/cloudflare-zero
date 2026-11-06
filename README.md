@@ -24,7 +24,8 @@ config, whatever is in it: the repo's own pinned wrangler reads the config, runs
 never parses one. One command adds it to a repo, and from then on every step is a mise task, numbered in the order you
 need them. Each one says what it did and what to run next, and `mise run cloudflare` shows where the repo is at any
 time. The logins are wrangler's and cf's own, made once per machine when you click **Allow**; GitHub never holds a
-Cloudflare credential. Every version is pinned, and one task, `mise run cloudflare:update`, moves them all. CI checks it
+Cloudflare credential. Every version is pinned, and one task, `mise run cloudflare:update`, moves them all, by
+[mise-check](https://github.com/joeblew999/mise-check), whose job pins are. CI checks it
 on macOS, Linux and Windows, and it sets itself up in a Claude Code cloud session.
 
 ## Use it in your repo
@@ -145,7 +146,7 @@ Every task is named noun:verb, what it acts on and then what it does, as a repo'
 | `template:e2e-deploy` | The walk on the template, as far as `deploy`: about 3 minutes | After a change to how it deploys | Yes |
 | `template:e2e-connect-github` | The walk on the template, as far as `connect-github`: about 7 minutes (it waits on Cloudflare's builds) | After a change to `connect-github` | Yes, and GitHub |
 | `template:check-mise` | `TestMise` on the template's mise file and the tool's Go | After a change to a task or a command | No |
-| `template:update` | The template's pins at their newest, by its own `cloudflare:update`: each moved one before → after | To move its pins; then the walks | No |
+| `template:update` | The template's pins at their newest, by its own `cloudflare:update` (mise-check's update): each moved one before → after | To move its pins; then the walks | No |
 | `new-repo:e2e-serve` | The walk on a new repo, as far as `serve` (`--version` pins a release) | After every change | No |
 | `new-repo:e2e-deploy` | The walk on a new repo, as far as `deploy` | After a change to how it deploys | Yes |
 | `new-repo:e2e-extras` | `new-repo:e2e-deploy` with the extras | After a change to `13-delete`, `06-serve` or previews | Yes |
@@ -157,7 +158,7 @@ Every task is named noun:verb, what it acts on and then what it does, as a repo'
 | `tool:test` | `go vet`, the Go tests, the release config | After every change | No |
 | `tool:release` | A release from the commit checked out, as `release.yml` runs it; `--dry-run` tags and publishes nothing | Never by hand: a merge to main runs it | GitHub |
 | `root:check-mise` | `TestMise` on this repo's own `mise.toml`, its mise side: one line each, the Go it runs there, `usage` passed by name, no POSIX shell syntax, so every task runs on Windows too | After a change to this repo's tasks | No |
-| `root:update` | This repo's own pins (`mise.toml`'s tools, `go.mod`'s modules) at their newest, by the tool's own update | To move its pins; then `tool:test` and the walks | No |
+| `root:update` | This repo's own pins (`mise.toml`'s tools, `go.mod`'s Go and modules) at their newest, by mise-check's update (`mise-check update`, pinned in `mise.toml`), as any repo's | To move its pins; then `tool:test` and the walks | No |
 
 ### Tests
 

@@ -1,7 +1,9 @@
-# mise-cloudflare for this repo, from its GitHub releases: mise install gets it. mise-cloudflare init writes this file
-# when the repo has none, pinning exactly the release that ran it (here in the template it's latest); from then on the
-# pin is the repo's (mise run cloudflare:update moves it). A .mise/config.local.toml beside it, never committed,
+# mise-cloudflare for this repo, from its GitHub releases: mise install gets it, and mise-check, which cloudflare:update
+# runs. mise-cloudflare init writes this file when the repo has none, pinning exactly the release that ran it (here in
+# the template it's latest), and adds mise-check's pin to one that has none; from then on the pins are the repo's (mise
+# run cloudflare:update moves them). A .mise/config.local.toml beside it, never committed,
 # overrides it on one machine: mise-cloudflare's own checkout pins its build there (local).
 
 [tools]
 "github:joeblew999/mise-cloudflare" = "latest"
+"github:joeblew999/mise-check" = "latest"

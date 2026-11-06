@@ -120,7 +120,7 @@ One name all the way through: each command is a task, `mise run cloudflare:<comm
 | `cloudflare:12-login` / `cloudflare:14-logout` | The repo's login (the others make it when they need it); logout deletes it, and cf's | Allow, to log in |
 | `cloudflare:15-clean` | The local state undone, as `13-delete` undoes Cloudflare's: `.wrangler/` (the local D1, KV and R2, and what deploys wrote) and `.dev.vars`, so the next `06-serve` starts from nothing. It asks first; `--yes` doesn't | y, to be sure |
 | `cloudflare:template` | The template's own Worker, in a repo with none yet, named for the repo's folder, with the `mise.toml` that installs its wrangler. It never writes over a file | Nothing |
-| `cloudflare:update` | The repo's own pins at their newest releases, nothing outside it: its mise tools (`mise upgrade --bump`), its packages (aube, which writes whichever lockfile the repo has) and Go modules (`go get -u`, `go mod tidy`), then `03-init` if mise-cloudflare moved (at `local` it stays). mise and aube skip a release younger than their minimum age. What changed is in git: the steps prove it | Nothing |
+| `cloudflare:update` | The repo's own pins at their newest releases, nothing outside it, by [mise-check](https://github.com/joeblew999/mise-check) (`mise-check update`, pinned beside mise-cloudflare in `.mise/config.toml`): its mise tools, its packages (aube, whichever lockfile the repo has) and its Go and Go modules, majors too, then `03-init` if mise-cloudflare moved (at `local` it stays). A release younger than 7 days is skipped, but the owner's own modules move at once. `--no-major` takes no majors; `--json` gives every pin before and after. What changed is in git: the steps prove it | Nothing |
 | `cloudflare:03-init` | After upgrading mise-cloudflare: init's files written again. The first time, before there are tasks: `mise exec github:joeblew999/mise-cloudflare@latest -- mise-cloudflare init` | Nothing |
 | `cloudflare:show-version` | This build's version | Nothing |
 | `cloudflare:show-help` | Every command | Nothing |
@@ -130,7 +130,7 @@ One name all the way through: each command is a task, `mise run cloudflare:<comm
 | File | What |
 |---|---|
 | `.mise/tasks/mise-cloudflare.toml` | The tasks, `mise run cloudflare` and `cloudflare:<command>` (mise finds them there by itself) |
-| `.mise/config.toml` | mise-cloudflare's pin, at the release that ran `init`: written once, then the repo's (`cloudflare:update` moves it) |
+| `.mise/config.toml` | mise-cloudflare's pin, at the release that ran `init`, and mise-check's, which `cloudflare:update` runs: written once, then the repo's (`cloudflare:update` moves them; `init` adds mise-check's to one without it) |
 | `docs/mise-cloudflare/README.md` | This page |
 | `.github/workflows/cloudflare.yml` | Checks the repo on every push and pull request |
 | `.claude/skills/cloudflare/SKILL.md` | The agent skill: how Claude works on the Worker |

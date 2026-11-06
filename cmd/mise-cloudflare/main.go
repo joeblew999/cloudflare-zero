@@ -43,7 +43,7 @@ The steps, in order (mise run cloudflare says which is next):
 And:
   mise run cloudflare:verify         what the repo's GitHub workflow runs: its setup and test tasks, then check
   mise run cloudflare:run-wrangler   any other wrangler command, on the repo's login: d1 list
-  mise run cloudflare:update         the repo's own pins at their newest releases: mise's tools, packages, Go modules
+  mise run cloudflare:update         the repo's own pins at their newest releases, by mise-check: mise's tools, packages, Go
   mise run cloudflare:template       the template's own Worker, in a repo with none yet: it never writes over a file
   mise run cloudflare:show-version   this build's version
   mise run cloudflare:show-help      this
@@ -95,12 +95,6 @@ func main() {
 		return
 	case "verify": // before the repo is opened: its setup installs the wrangler that needs
 		verify(ctx, dir)
-		return
-	case "update": // any folder with pins of its own, a Worker or not
-		if inCI() {
-			fail(errors.New("in CI update doesn't run: CI only checks the repo, and update changes its pins; run mise run cloudflare:update on your machine, then the steps"))
-		}
-		repo{dir: dir}.update(ctx)
 		return
 	}
 	// CI only checks the repo; Cloudflare's Workers Builds deploys. No one is there to click Allow.

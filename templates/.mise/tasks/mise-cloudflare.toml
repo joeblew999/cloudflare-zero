@@ -80,8 +80,9 @@ description = "What the repo's GitHub workflow runs: its own setup and test task
 run = "mise-cloudflare verify"
 
 ["cloudflare:update"]
-description = "The repo's own pins at their newest releases: its mise tools, its packages (with aube, whichever lockfile it has) and Go modules, mise-cloudflare's pin among them (at local it stays; moved, 03-init writes its files again). What changed is in git: the steps prove it"
-run = "mise-cloudflare update"
+description = "The repo's own pins at their newest releases, by mise-check (github.com/joeblew999/mise-check), whose job pins are: its mise tools, its packages (with aube, whichever lockfile it has) and its Go and Go modules, majors too, mise-cloudflare's pin among them (at local it stays; moved, 03-init writes its files again). What changed is in git: the steps prove it. --no-major takes no majors"
+usage = 'flag "--no-major" help="no major moves: packages within their ranges, Go modules within their major"; flag "--json" help="one JSON document on stdout, every pin before and after, instead of text"'
+run = 'mise-check update{% if usage.no_major %} --no-major{% endif %}{% if usage.json %} --json{% endif %}'
 
 ["cloudflare:template"]
 description = "The template's own Worker, in a repo with none yet: its code, wrangler.jsonc and package.json named for the repo's folder, the lockfile, .dev.vars.example, and the mise.toml that installs its wrangler. It never writes over a file: a repo with a Worker of its own gets none of it. Then mise install, mise run setup"

@@ -25,7 +25,7 @@
 #     mise run tool:release            a release from the commit checked out, as release.yml runs it (--dry-run)
 #   root: this repo itself
 #     mise run root:check-mise         TestMise on this file: one line each, its Go there, usage by name, no POSIX shell syntax
-#     mise run root:update             this repo's own pins (this file's tools, go.mod) at their newest, by the tool's update
+#     mise run root:update             this repo's own pins (this file's tools, go.mod) at their newest, by mise-check's update
 # Each runs what it needs first: run the furthest you need.
 
 [settings]
@@ -36,9 +36,10 @@ skills.fetch = false
 
 [tools]
 node = "26.13.0"   # runs cf, an npm package (a walked repo runs its wrangler on its own node)
-usage = { version = "7.1.3", workflow = "publish-cli.yml" }    # --help and tab-completion for the tasks' flags
-goreleaser = "2.19.0"   # the release's binaries (.goreleaser.yaml)
+usage = { version = "7.2.0", workflow = "publish-cli.yml" }    # --help and tab-completion for the tasks' flags
+goreleaser = "2.20.0"   # the release's binaries (.goreleaser.yaml)
 "npm:cf" = "1.0.0-beta.26"   # Cloudflare's own CLI: the walk asks it about a repo's cf login and its Workers Builds builds
+"github:joeblew999/mise-check" = "0.4.13"   # this repo's own pins moved by its update (root:update), as any repo's
 
 [tasks."template:check-mise"]
 description = "TestMise on the template's mise file against Go, and only Go (a task that runs anything else is reported as not checked), both ways: against the tool's Go it runs (each task's command is its file, each command file is a task's), and against the end-to-end that runs it (each task the Go names is one), by the base rule (mise_test.go)"
@@ -76,8 +77,8 @@ env = { MISE_FILE = "mise.toml" }
 run = 'go test . -run "^TestMise$" -count=1 -v'
 
 [tasks."root:update"]
-description = "This repo's own pins at their newest releases, with the tool's own update run on it from source: this mise.toml's tools (node, usage, goreleaser, cf) and go.mod's modules. It ends with every pin, the moved ones before → after. Then tool:test and the walks prove it"
-run = "go run ./cmd/mise-cloudflare update"
+description = "This repo's own pins at their newest releases, by mise-check's update, as any repo's: this mise.toml's tools (node, usage, goreleaser, cf, mise-check) and go.mod's Go and modules (mise-check's own at once, others' after 7 days). It ends with every pin, the moved ones before → after. Then tool:test and the walks prove it"
+run = "mise-check update"
 
 [tasks."new-repo:e2e-serve"]
 description = "TestWalk on a new repo, made as a person makes one (an empty folder with its own git, mise-cloudflare init, then its own cloudflare:template: the template's Worker named for the folder, mise-cloudflare-new), in a folder of its own that goes when the walk ends; as far as the stage serve (06-serve, needing nothing). It pins this checkout's build (local), or a release with --version, as the release tries it. After tool:install"
