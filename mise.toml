@@ -39,11 +39,11 @@ node = "26.13.0"   # runs cf, an npm package (a walked repo runs its wrangler on
 usage = { version = "7.2.0", workflow = "publish-cli.yml" }    # --help and tab-completion for the tasks' flags
 goreleaser = "2.20.0"   # the release's binaries (.goreleaser.yaml)
 "npm:cf" = "1.0.0-beta.26"   # Cloudflare's own CLI: the walk asks it about a repo's cf login and its Workers Builds builds
-"github:joeblew999/mise-check" = "0.4.13"   # this repo's own pins moved by its update (root:update), as any repo's
+"github:joeblew999/mise-check" = "0.4.15"   # this repo's own pins moved by its update (root:update), as any repo's
 
 [tasks."template:check-mise"]
-description = "TestMise on the template's mise file against Go, and only Go (a task that runs anything else is reported as not checked), both ways: against the tool's Go it runs (each task's command is its file, each command file is a task's), and against the end-to-end that runs it (each task the Go names is one), by the base rule (mise_test.go)"
-env = { MISE_FILE = "templates/.mise/tasks/mise-cloudflare.toml", GO_CMD = "cmd", GO_LAYOUT = "file", GO_CALLERS = "." }
+description = "TestMise on the template's mise file against Go, and only Go (a task that runs anything else is reported as not checked), both ways: against the tool's Go it runs (each task's command is its file, each command file is a task's), against the end-to-end that runs it (each task the Go names is one), and against the template's skill (it names every task and flag, and only tasks there are), by the base rule (mise_test.go)"
+env = { MISE_FILE = "templates/.mise/tasks/mise-cloudflare.toml", GO_CMD = "cmd", GO_LAYOUT = "file", GO_CALLERS = ".", SKILL_FILE = "templates/.claude/skills/cloudflare/SKILL.md" }
 run = 'go test . -run "^TestMise$" -count=1 -v'
 
 [tasks."template:e2e-serve"]

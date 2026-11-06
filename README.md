@@ -145,7 +145,7 @@ Every task is named noun:verb, what it acts on and then what it does, as a repo'
 | `template:e2e-serve` | The walk on the template, as far as `serve` | After every change | No |
 | `template:e2e-deploy` | The walk on the template, as far as `deploy`: about 3 minutes | After a change to how it deploys | Yes |
 | `template:e2e-connect-github` | The walk on the template, as far as `connect-github`: about 7 minutes (it waits on Cloudflare's builds) | After a change to `connect-github` | Yes, and GitHub |
-| `template:check-mise` | `TestMise` on the template's mise file and the tool's Go | After a change to a task or a command | No |
+| `template:check-mise` | `TestMise` on the template's mise file, the tool's Go, the walk and the skill, both ways | After a change to a task, a command or the skill | No |
 | `template:update` | The template's pins at their newest, by its own `cloudflare:update` (mise-check's update): each moved one before → after | To move its pins; then the walks | No |
 | `new-repo:e2e-serve` | The walk on a new repo, as far as `serve` (`--version` pins a release) | After every change | No |
 | `new-repo:e2e-deploy` | The walk on a new repo, as far as `deploy` | After a change to how it deploys | Yes |
