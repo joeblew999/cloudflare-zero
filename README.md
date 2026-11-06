@@ -145,7 +145,7 @@ Every task is named noun:verb, what it acts on and then what it does, as a repo'
 | `template:e2e-serve` | The walk on the template, as far as `serve` | After every change | No |
 | `template:e2e-deploy` | The walk on the template, as far as `deploy`: about 3 minutes | After a change to how it deploys | Yes |
 | `template:e2e-connect-github` | The walk on the template, as far as `connect-github`: about 7 minutes (it waits on Cloudflare's builds) | After a change to `connect-github` | Yes, and GitHub |
-| `template:check-mise` | `TestMise` on the template's mise file, the tool's Go, the walk and the skill, both ways | After a change to a task, a command or the skill | No |
+| `template:check-mise` | `TestTemplateMise` on the template's mise file, the tool's Go, the walk and the skill, both ways | After a change to a task, a command or the skill | No |
 | `template:update` | The template's pins at their newest, by its own `cloudflare:update` (mise-check's update): each moved one before → after | To move its pins; then the walks | No |
 | `new-repo:e2e-serve` | The walk on a new repo, as far as `serve` (`--version` pins a release) | After every change | No |
 | `new-repo:e2e-deploy` | The walk on a new repo, as far as `deploy` | After a change to how it deploys | Yes |
@@ -157,7 +157,7 @@ Every task is named noun:verb, what it acts on and then what it does, as a repo'
 | `tool:install` | That build as the mise version `local`, for any repo on this machine (`mise use github:joeblew999/mise-cloudflare@local` there) and the template's (`templates/.mise/config.local.toml`, never committed) | To try a change in another repo, never by waiting on a release | No |
 | `tool:test` | `go vet`, the Go tests, the release config | After every change | No |
 | `tool:release` | A release from the commit checked out, as `release.yml` runs it; `--dry-run` tags and publishes nothing | Never by hand: a merge to main runs it | GitHub |
-| `root:check-mise` | `TestMise` on this repo's own `mise.toml`, its mise side: one line each, the Go it runs there, `usage` passed by name, no POSIX shell syntax, so every task runs on Windows too | After a change to this repo's tasks | No |
+| `root:check-mise` | `TestRootMise` on this repo's own `mise.toml`, its mise side: one line each, the Go it runs there, `usage` passed by name, no POSIX shell syntax, so every task runs on Windows too | After a change to this repo's tasks | No |
 | `root:update` | This repo's own pins (`mise.toml`'s tools, `go.mod`'s Go and modules) at their newest, by mise-check's update (`mise-check update`, pinned in `mise.toml`), as any repo's | To move its pins; then `tool:test` and the walks | No |
 
 ### Tests
@@ -165,7 +165,7 @@ Every task is named noun:verb, what it acts on and then what it does, as a repo'
 **The walk.** A repo's steps are its own numbered tasks, `cloudflare:03-init` to `cloudflare:15-clean`
 ([templates/.mise/tasks/mise-cloudflare.toml](templates/.mise/tasks/mise-cloudflare.toml)), after steps 00 to 02 (the
 repo's git, `mise install`, its own `setup`). One name all the way through: `cloudflare:08-deploy` runs
-`mise-cloudflare deploy`, which is `main.go`'s `case "deploy"` calling `r.deploy` in `deploy.go`. `TestWalk` walks
+`mise-cloudflare deploy`, which is `main.go`'s `case "deploy"` calling `r.deploy` in `deploy.go`. The walk tests (`TestWalkTemplate`, `TestWalkNewRepo`, …, one a kind of repo) walk
 them in their order, through the repo's own mise file, as a person takes them, each step with its check, as far as a
 stage:
 
@@ -214,7 +214,7 @@ environment (its name, compatibility date, bindings, the named and the remote on
 wrangler its repo pins, wrangler's warnings) and what `check` finds. Each problem it shows is either our taste, to
 remove, or a real fact about that repo. Add a repo to repos.txt to add it to the corpus.
 
-**The mise ↔ Go checker**, [mise_test.go](mise_test.go)'s `TestMise`, checks a mise file against the Go it runs, both
+**The mise ↔ Go checker**, [mise_test.go](mise_test.go)'s `TestRootMise` and `TestTemplateMise`, checks a mise file against the Go it runs, both
 ways, for any repo (the caller says which). Each task's command is a command's file in `cmd/mise-cloudflare`, and each
 command a task's; each task the walk names is one; every task declares its flags and arguments with mise's `usage` and
 passes them by name. `root:check-mise` points it at this repo's own `mise.toml`, its mise side only: the root runs Go,
@@ -227,10 +227,10 @@ it isn't a binary's tasks.
 | [templates/](templates/) | other repos' | the template: a sample Worker plus the tool's half, which `init` writes into a repo at the same paths (the tasks, the workflow, the Claude Code hook and settings, the agent skill, the docs, the `.gitignore`); [templates.go](templates/templates.go) lists that half |
 | [cmd/mise-cloudflare/](cmd/mise-cloudflare/) | other repos' | the command: a file per command, `x.go` holding `r.x`, which `main.go`'s `case "x"` calls |
 | [internal/](internal/) | other repos' | the login (`wrangler`), Cloudflare's cf (`cf`), Cloudflare's API decided on its status (`cfapi`), the Worker's config as wrangler reads it (`wconfig`), the rules (`rules`) |
-| [e2e_walk_test.go](e2e_walk_test.go), [e2e_steps_test.go](e2e_steps_test.go), [e2e_mise_test.go](e2e_mise_test.go), [e2e_cloudflare_test.go](e2e_cloudflare_test.go), [e2e_bindings_test.go](e2e_bindings_test.go) | this repo's | the walk, on [mise-check's `walk`](https://github.com/joeblew999/mise-check#use-walk), which runs the steps in their order and does everything that isn't Cloudflare's: `TestWalk` and its stages; the steps, each with its check; what's Cloudflare's in making a repo (a new one, an adopted Worker, a checkout of `HEAD`); what it looks at on Cloudflare; the extras |
+| [e2e_walk_test.go](e2e_walk_test.go), [e2e_steps_test.go](e2e_steps_test.go), [e2e_mise_test.go](e2e_mise_test.go), [e2e_cloudflare_test.go](e2e_cloudflare_test.go), [e2e_bindings_test.go](e2e_bindings_test.go) | this repo's | the walk, on [mise-check's `walk`](https://github.com/joeblew999/mise-check#use-walk), which runs the steps in their order and does everything that isn't Cloudflare's: the walk tests and their stages; the steps, each with its check; what's Cloudflare's in making a repo (a new one, an adopted Worker, a checkout of `HEAD`); what it looks at on Cloudflare; the extras |
 | [tool_test.go](tool_test.go) | this repo's | `TestToolRelease`, the release: only `mise run tool:release` runs it |
 | [repos.txt](repos.txt), `repos/` | this repo's | the corpus's repos, and their clones (git-ignored) |
-| [mise_test.go](mise_test.go) | this repo's | `TestMise`: [mise-check's `misecheck`](https://github.com/joeblew999/mise-check) on a mise file of this repo and the Go it runs, both ways |
+| [mise_test.go](mise_test.go) | this repo's | `TestRootMise` and `TestTemplateMise`: [mise-check's `misecheck`](https://github.com/joeblew999/mise-check) on a mise file of this repo and the Go it runs, both ways |
 | [.claude/](.claude/), [.github/workflows/](.github/workflows/) | this repo's | its own Claude Code hook and its own workflows; other repos get theirs from `templates/` |
 
 ### CI and releases

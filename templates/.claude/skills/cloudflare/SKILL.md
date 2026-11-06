@@ -25,7 +25,7 @@ of its name (`mise run cloudflare:08-deploy` runs `mise-cloudflare deploy`).
 | `mise run cloudflare:07-set-secrets` | before the first deploy, and for a new secret | asks for each secret the Worker requires that Cloudflare doesn't have yet |
 | `mise run cloudflare:08-deploy` | to put the Worker on Cloudflare | `wrangler deploy` on the repo's own login; the first time, the person clicks Allow |
 | `mise run cloudflare:09-connect-github` | once, so Cloudflare deploys every push | Workers Builds: a preview for every pull request, production from the default branch |
-| `mise run cloudflare:10-set-preview-secrets` | after connect-github, for each secret previews need | asks for each, in the Previews Base: previews don't inherit the Worker's |
+| `mise run cloudflare:10-set-preview-secrets` | before the first preview (`11-preview`, or a pull request's after connect-github) | asks for each secret previews need, in the Previews Base: previews don't inherit the Worker's |
 | `mise run cloudflare:11-preview` | to try what's here at its own URL | `wrangler preview`, with its own KV, D1, R2, Queues and Flagship apps |
 | `mise run cloudflare:12-login` | only when asked to log in first | the repo's Cloudflare login; the other tasks make it when they need it |
 | `mise run cloudflare:13-delete` | to undo deploy | the Worker deleted, then its own KV, D1, R2, Queues, Flagship apps and its previews' own; it asks first |
@@ -42,7 +42,7 @@ of its name (`mise run cloudflare:08-deploy` runs `mise-cloudflare deploy`).
 | `mise run cloudflare:update` | when the person asks to upgrade | every pin at its newest, by mise-check: mise's tools, the packages (aube), Go and Go modules |
 | `mise run cloudflare:template` | only in a repo with no Worker yet | the template's Worker, named for the repo's folder; it never writes over a file |
 | `mise run cloudflare:show-version` | to say which mise-cloudflare this is | its version |
-| `mise run cloudflare:show-help` | to list every command | every command and its flags |
+| `mise run cloudflare:show-help` | to list every command | every command |
 
 ## Flags and arguments
 

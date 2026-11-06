@@ -6,7 +6,7 @@ name: ci
 
 on:
   push:
-    branches-ignore: ["e2e-*"] # TestWalk's throwaway branches: they're there for Workers Builds, not for this CI
+    branches-ignore: ["e2e-*"] # the walk's throwaway branches: they're there for Workers Builds, not for this CI
     tags: ["**"]
   pull_request:
 

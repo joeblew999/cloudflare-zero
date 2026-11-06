@@ -239,8 +239,8 @@ var steps = []walk.Step[*walker]{
 		}
 	}},
 	{Task: "cloudflare:14-logout", Stage: int(deploy), Check: func(w *walker) {
-		if os.Getenv("DEPLOY_CLEAN") != "true" {
-			w.Pass("the login kept, so the next walk needs no Allow (DEPLOY_CLEAN=true logs out)")
+		if !*logoutFlag {
+			w.Pass("the login kept, so the next walk needs no Allow (-args -logout logs out)")
 			return
 		}
 		w.MustTask("cloudflare:14-logout")

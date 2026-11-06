@@ -50,7 +50,7 @@ func made() int {
 }
 
 // withExtras reports whether this walk adds the extras (mise run new-repo:e2e-extras).
-func withExtras() bool { return os.Getenv("E2E_EXTRAS") == "true" }
+func withExtras() bool { return walkExtras }
 
 // remoteExtras reports whether this walk adds an extra wrangler runs on Cloudflare even locally.
 func remoteExtras() bool {
@@ -133,10 +133,10 @@ func (r repo) previewBindsOwn(token, account string, env map[string]any) []strin
 	return wrong
 }
 
-// withEnv is the wrangler environment a walk deploys instead of the config's top level (mise run new-repo:e2e-env,
-// E2E_ENV=staging), or "": the developer adds it to the new repo's wrangler config, and every step runs with
+// withEnv is the wrangler environment a walk deploys instead of the config's top level (mise run new-repo:e2e-env:
+// staging), or "": the developer adds it to the new repo's wrangler config, and every step runs with
 // CLOUDFLARE_ENV naming it, as the docs say. The login stays the repo's one, named after the top level's Worker.
-func withEnv() string { return os.Getenv("E2E_ENV") }
+func withEnv() string { return walkEnv }
 
 // addEnv writes the environment env into the repo's wrangler.jsonc, as a developer adds one: the template's bindings
 // and secret again under env.<env>, since wrangler inherits neither; its previews block it inherits. Then the walk's
