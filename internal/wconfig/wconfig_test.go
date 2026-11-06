@@ -101,6 +101,20 @@ func TestTemplate(t *testing.T) {
 	}
 }
 
+// TestBehindProxy: on a machine whose network goes through a proxy, the config still reads with no warnings: wrangler's
+// notice that it will use the proxy is about the machine, not the config (issue #27).
+func TestBehindProxy(t *testing.T) {
+	t.Setenv("HTTPS_PROXY", "http://127.0.0.1:9")
+	t.Setenv("HTTP_PROXY", "http://127.0.0.1:9")
+	w, err := read(t, filepath.Join("..", "..", "templates", "wrangler.jsonc"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.Warnings != "" {
+		t.Errorf("behind a proxy, warnings %q, want none", w.Warnings)
+	}
+}
+
 // TestBroken: wrangler's own validation comes through: an unexpected field as its warning, a wrong type as its error.
 func TestBroken(t *testing.T) {
 	w, err := read(t, filepath.Join("testdata", "broken-field.jsonc"), "")

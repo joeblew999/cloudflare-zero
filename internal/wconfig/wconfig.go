@@ -85,7 +85,7 @@ func ReadEnv(ctx context.Context, dir, env string) (Config, error) {
 	var c Config
 	cmd := exec.CommandContext(ctx, "node", "--input-type=module", "-e", script)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "CLOUDFLARE_ENV="+env)
+	cmd.Env = append(withoutProxy(os.Environ()), "CLOUDFLARE_ENV="+env)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
@@ -117,6 +117,21 @@ func ReadEnv(ctx context.Context, dir, env string) (Config, error) {
 	}
 	c.Warnings = strings.Join(said, "\n")
 	return c, nil
+}
+
+// withoutProxy is env without the proxy settings. Reading a config uses no network, and wrangler, given a proxy,
+// says it will use it: a notice about the machine, not the config, which would read as a problem with it.
+func withoutProxy(env []string) []string {
+	var out []string
+	for _, e := range env {
+		name, _, _ := strings.Cut(e, "=")
+		switch strings.ToUpper(name) {
+		case "HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY", "NO_PROXY":
+			continue
+		}
+		out = append(out, e)
+	}
+	return out
 }
 
 // HasEnv reports whether the config defines the wrangler environment env (env.<env>).
