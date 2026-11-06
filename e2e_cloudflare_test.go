@@ -86,10 +86,10 @@ func gone(url string, limit time.Duration) bool {
 
 // d1ID is the uuid of the Worker's D1 (wrangler names it <worker>-db), "" if it doesn't exist.
 func (r repo) d1ID() string {
-	r.t.Helper()
+	r.T.Helper()
 	var dbs []struct{ UUID, Name string }
 	if out := r.miseWranglerStdout("d1", "list", "--json"); json.Unmarshal([]byte(jsonPart(out)), &dbs) != nil {
-		r.t.Fatalf("wrangler d1 list --json printed no list of D1 databases:\n%s", out)
+		r.T.Fatalf("wrangler d1 list --json printed no list of D1 databases:\n%s", out)
 	}
 	for _, d := range dbs {
 		if d.Name == r.worker+"-db" {
@@ -101,10 +101,10 @@ func (r repo) d1ID() string {
 
 // kvID is the id of the Worker's KV namespace (<worker>-kv), "" if it doesn't exist.
 func (r repo) kvID() string {
-	r.t.Helper()
+	r.T.Helper()
 	var ns []struct{ ID, Title string }
 	if out := r.miseWranglerStdout("kv", "namespace", "list"); json.Unmarshal([]byte(jsonPart(out)), &ns) != nil {
-		r.t.Fatalf("wrangler kv namespace list printed no list of KV namespaces:\n%s", out)
+		r.T.Fatalf("wrangler kv namespace list printed no list of KV namespaces:\n%s", out)
 	}
 	for _, n := range ns {
 		if n.Title == r.worker+"-kv" {
@@ -119,7 +119,7 @@ func (r repo) kvID() string {
 func (r repo) hasR2(token, account string) bool {
 	got, err := cfapi.Call(context.Background(), token, http.MethodGet, "/accounts/"+account+"/r2/buckets/"+r.worker+"-bucket", nil, "")
 	if err != nil || (!got.OK() && got.Status != http.StatusNotFound) {
-		r.t.Fatalf("Cloudflare's R2 bucket %s-bucket: %v %s", r.worker, err, got.Said())
+		r.T.Fatalf("Cloudflare's R2 bucket %s-bucket: %v %s", r.worker, err, got.Said())
 	}
 	return got.OK()
 }
@@ -131,14 +131,14 @@ func (r repo) api() (token, account string) {
 		Token string `json:"token"`
 	}
 	if json.Unmarshal([]byte(jsonPart(r.miseWranglerStdout("auth", "token", "--json"))), &t) != nil || t.Token == "" {
-		r.t.Fatal("wrangler auth token --json gave no token")
+		r.T.Fatal("wrangler auth token --json gave no token")
 	}
 	var accounts []struct {
 		ID string `json:"id"`
 	}
 	got, err := cfapi.Call(context.Background(), t.Token, http.MethodGet, "/accounts", nil, "")
 	if err != nil || !got.OK() || json.Unmarshal(got.Result, &accounts) != nil || len(accounts) != 1 {
-		r.t.Fatalf("the login's accounts, from Cloudflare's API: %d, want 1: %v %s", len(accounts), err, got.Said())
+		r.T.Fatalf("the login's accounts, from Cloudflare's API: %d, want 1: %v %s", len(accounts), err, got.Said())
 	}
 	return t.Token, accounts[0].ID
 }
@@ -163,7 +163,7 @@ func (r repo) durableObjectsLeft(token, account string) []string {
 	got, err := cfapi.Call(context.Background(), token, http.MethodGet, "/accounts/"+account+"/workers/durable_objects/namespaces?per_page=1000", nil, "")
 	var list []struct{ Class, Script string }
 	if err != nil || !got.OK() || json.Unmarshal(got.Result, &list) != nil {
-		r.t.Fatalf("Cloudflare's Durable Object namespaces: %v %s", err, got.Said())
+		r.T.Fatalf("Cloudflare's Durable Object namespaces: %v %s", err, got.Said())
 	}
 	var left []string
 	for _, n := range list {
@@ -196,31 +196,31 @@ func (r repo) left(token, account string) []string {
 
 // nothingOnCloudflare fails unless the Worker and its D1, KV and R2 (and its previews') aren't on the account.
 func (r repo) nothingOnCloudflare() {
-	r.t.Helper()
+	r.T.Helper()
 	// Whether the Worker is there is Cloudflare's API's to say, by its status (404 not there), as the tool decides.
 	token, account := r.api()
 	got, err := cfapi.Call(context.Background(), token, http.MethodGet, "/accounts/"+account+"/workers/scripts/"+r.worker+"/settings", nil, "")
 	switch {
 	case err != nil:
-		r.t.Fatal(err)
+		r.T.Fatal(err)
 	case got.OK():
-		r.t.Fatalf("%s is still deployed", r.worker)
+		r.T.Fatalf("%s is still deployed", r.worker)
 	case got.Status != http.StatusNotFound:
-		r.t.Fatalf("couldn't tell whether %s is deployed: %s", r.worker, got.Said())
+		r.T.Fatalf("couldn't tell whether %s is deployed: %s", r.worker, got.Said())
 	}
 	if left := r.leftWith(token, account); len(left) > 0 {
-		r.t.Fatalf("%s is still on the account", strings.Join(left, ", "))
+		r.T.Fatalf("%s is still on the account", strings.Join(left, ", "))
 	}
-	r.pass("nothing of %s is on the account", r.worker)
+	r.Pass("nothing of %s is on the account", r.worker)
 }
 
 // buildOutcome waits for Cloudflare's own record of a Workers Builds build of the Worker from branch, and returns its
 // outcome (success, failure), or what it waited for.
 func (r repo) buildOutcome(branch string, limit time.Duration) string {
-	r.t.Helper()
+	r.T.Helper()
 	cfJSON := func(v any, args ...string) error {
 		cmd := exec.Command("cf", append(args, "--profile", r.login)...)
-		cmd.Dir = r.dir
+		cmd.Dir = r.Dir
 		out, err := cmd.Output()
 		if err != nil {
 			return err
@@ -254,7 +254,7 @@ func (r repo) buildOutcome(branch string, limit time.Duration) string {
 		for _, b := range builds {
 			if b.Trigger.Branch == branch && b.Outcome != "" {
 				if b.Outcome != "success" {
-					r.run(nil, "cf", "builds", "logs", "get", b.UUID, "--profile", r.login)
+					r.Run(nil, "cf", "builds", "logs", "get", b.UUID, "--profile", r.login)
 				}
 				return b.Outcome
 			}
@@ -266,7 +266,7 @@ func (r repo) buildOutcome(branch string, limit time.Duration) string {
 // previewOn is the preview Cloudflare has of the Worker by name: its URL, and its latest deployment's bindings (env), as
 // Cloudflare's API gives them.
 func (r repo) previewOn(token, account, name string) (string, map[string]any) {
-	r.t.Helper()
+	r.T.Helper()
 	base := "/accounts/" + account + "/workers/workers/" + r.worker + "/previews"
 	got, err := cfapi.Call(context.Background(), token, http.MethodGet, base+"?name="+name, nil, "")
 	var previews []struct {
@@ -275,7 +275,7 @@ func (r repo) previewOn(token, account, name string) (string, map[string]any) {
 		URLs []string `json:"urls"`
 	}
 	if err != nil || !got.OK() || json.Unmarshal(got.Result, &previews) != nil || len(previews) != 1 || len(previews[0].URLs) == 0 {
-		r.t.Fatalf("Cloudflare's preview %s of %s: %v %s", name, r.worker, err, got.Said())
+		r.T.Fatalf("Cloudflare's preview %s of %s: %v %s", name, r.worker, err, got.Said())
 	}
 	got, err = cfapi.Call(context.Background(), token, http.MethodGet, base+"/"+previews[0].ID+"/deployments", nil, "")
 	var deployments []struct {
@@ -283,7 +283,7 @@ func (r repo) previewOn(token, account, name string) (string, map[string]any) {
 		Env    map[string]any `json:"env"`
 	}
 	if err != nil || !got.OK() || json.Unmarshal(got.Result, &deployments) != nil || len(deployments) == 0 {
-		r.t.Fatalf("the preview %s's deployments: %v %s", name, err, got.Said())
+		r.T.Fatalf("the preview %s's deployments: %v %s", name, err, got.Said())
 	}
 	latest := slices.MaxFunc(deployments, func(a, b struct {
 		Number int            `json:"number"`

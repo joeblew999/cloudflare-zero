@@ -109,7 +109,7 @@ run = 'go test . -run "^TestWalk$" -count=1 -v -timeout 30m'
 description = "TestWalk on a third-party Worker of the corpus, adopted as its owner would: its folder (as repos:check cloned it, repos/<owner>/<repo>/...) copied into a repo of its own with its own git, mise-cloudflare init at this checkout's build, its own install by its lockfile, its wrangler moved as the tool says when it has no auth profiles, then its numbered tasks as far as the stage deploy: deployed on its own login, checked live, then deleted, nothing of it left on Cloudflare. The first time, an Allow. After tool:install and repos:check"
 usage = 'arg "<path>" help="the Worker folder in repos/, as repos:check cloned it: repos/cloudflare/realtime-examples/video-to-jpeg"'
 depends = ["tool:install"]
-env = { E2E_STAGE = "deploy" }
+env = { REPO_PATH = "repos", E2E_STAGE = "deploy" }
 run = 'go test . -run "^TestWalk$" -count=1 -v -timeout 30m -args -adopt "{{usage.path}}"'
 
 [tasks."tool:build"]

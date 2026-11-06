@@ -1,73 +1,45 @@
-// Package e2e is this repo's end-to-end test: a walk of a repo's numbered tasks, through the repo's own mise file. It
-// sits at the top of this repo, beside the root mise.toml whose tasks run it, in a file for each thing it does:
+// Package e2e is this repo's end-to-end test: a walk of a repo's numbered tasks, through the repo's own mise file, on
+// mise-check's walk (github.com/joeblew999/mise-check/walk), which runs the steps in their order and does everything
+// that isn't Cloudflare's. It sits at the top of this repo, beside the root mise.toml whose tasks run it, in a file for
+// each thing it does:
 //
 //   - e2e_walk_test.go, this file: TestWalk, the test the root's tasks run (which repo, REPO_PATH, and how far,
-//     E2E_STAGE), the stages, and walking the steps.
+//     E2E_STAGE), and the stages.
 //   - e2e_steps_test.go: the steps, the repo's numbered tasks in their order, each with its check.
-//   - e2e_mise_test.go: the repo, and the calls into its own mise file, made in it as a person there makes them.
+//   - e2e_mise_test.go: the repo, and what's Cloudflare's in making one: a new repo (mise-cloudflare init, then
+//     cloudflare:template), an adopted third-party Worker, a checkout of HEAD, and the calls the steps make.
 //   - e2e_cloudflare_test.go: what the walk looks at besides, as a person does: the Worker's URL, the account's D1, KV
 //     and R2, Cloudflare's builds.
-//   - e2e_os_test.go, e2e_os_windows_test.go: what each OS does its own way: the local Worker's processes, and a
-//     path's long name (Windows' C:\Users\RUNNER~1 is C:\Users\runneradmin).
 //
 // tool_test.go is the release (mise run tool:release), and mise_test.go checks that the mise files and the Go line up,
 // both ways.
 package e2e
 
 import (
-	"crypto/sha256"
 	"flag"
-	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"testing"
 	"time"
+
+	"github.com/joeblew999/mise-check/walk"
 )
 
-// TestWalk walks the repo REPO_PATH names (a folder of this repo: templates) as far as the stage E2E_STAGE names (serve,
-// deploy or connect-github); with E2E_STAMPED=true, a copy stamped out from it instead, in a folder of its own that
-// goes when the walk ends, pinning mise-cloudflare at the release -version names, or this checkout's build. The root's
-// tasks set them: mise run template:e2e-serve is REPO_PATH=templates E2E_STAGE=serve. Without E2E_STAGE it skips, so
-// go test ./... never touches Cloudflare.
-func TestWalk(t *testing.T) {
-	name := os.Getenv("E2E_STAGE")
-	if name == "" {
-		t.Skip("E2E_STAGE is how far to walk, and the root's task sets it: mise run template:e2e-serve")
-	}
-	upTo := slices.Index(stageNames, name)
-	if upTo < 0 {
-		t.Fatalf("E2E_STAGE=%s: the stages are %s", name, strings.Join(stageNames, ", "))
-	}
-	path, adopt := os.Getenv("REPO_PATH"), *adoptFlag != ""
-	if adopt {
-		path = *adoptFlag
-	}
-	r := repoAt(t, path)
-	stamped, pin := os.Getenv("E2E_STAMPED") == "true", *releaseFlag
-	switch {
-	case adopt && (stamped || pin != "" || stage(upTo) == connectGithub):
-		t.Fatal("an adopted copy is the third-party repo's own, with its own git, not on GitHub: walk it alone, as far as deploy")
-	case adopt:
-		r = r.adoptedCopy()
-	case pin != "" && !stamped:
-		t.Fatalf("-version %s pins a stamped copy's mise-cloudflare: E2E_STAMPED=true too", pin)
-	case stamped && stage(upTo) == connectGithub:
-		t.Fatal("a stamped copy has its own git, not on GitHub, where connect-github's steps push: walk it as far as deploy")
-	case stamped:
-		r = r.stampedCopy(pin)
-	case stage(upTo) == connectGithub:
-		r = r.checkoutOfHead()
-	}
-	r.miseSetUp()
-	walkSteps(t, r, stage(upTo))
-}
+// cloudflareWalk is the walk: the template's numbered tasks (templates/.mise/tasks/mise-cloudflare.toml), in their
+// order, each checked, as far as E2E_STAGE. The root's tasks say which repo: the template where it is
+// (REPO_PATH=templates), a new repo made the README's way (E2E_STAMPED=true, at the release -version names or this
+// checkout's build), or a third-party Worker adopted as its owner would (-adopt).
+var cloudflareWalk = walk.Walk[*walker]{Steps: steps, Stages: stageNames, New: newRepo, Prepare: prepare, Of: walkOf}
 
-// releaseFlag is the release a stamped copy runs at, the test's flag -version: mise run new-repo:e2e-serve --version
-// v0.1.17 passes it (go test … -args -version v0.1.17). Without it, this checkout's build (local).
-var releaseFlag = flag.String("version", "", "the release a stamped copy runs at (default this checkout's build)")
+// TestWalk walks the repo the root's task names (mise run template:e2e-serve is REPO_PATH=templates E2E_STAGE=serve).
+// Without REPO_PATH it skips, so go test ./... never touches Cloudflare.
+func TestWalk(t *testing.T) { cloudflareWalk.Run(t) }
+
+// TestSteps checks that the steps are the template's numbered tasks, in their order, so the walk is that file's walk.
+func TestSteps(t *testing.T) {
+	walk.CheckSteps(t, "templates/.mise/tasks/mise-cloudflare.toml", steps)
+}
 
 // adoptFlag is a third-party Worker's folder in repos/, as repos:check cloned it, to adopt and walk instead, the test's
 // flag -adopt: mise run repos:e2e-adopt repos/cloudflare/realtime-examples/video-to-jpeg passes it.
@@ -87,101 +59,71 @@ var stageNames = []string{"serve", "deploy", "connect-github"}
 
 func (s stage) String() string { return stageNames[s] }
 
-// walk is the steps run on a repo in their order, as far as upTo, with what they leave for the steps after them.
-type walk struct {
-	repo
-	upTo       stage
-	before     map[string][32]byte // the repo's files before the steps that deploy, which must change none of them
-	url        string              // the Worker's, once 08-deploy has deployed it
-	preview    string              // its preview's, once 11-preview has made it
-	prod, prev string              // the throwaway branches connect-github's steps push
+// upTo is how far this walk goes, as E2E_STAGE names it (walk.Run has checked it's one of stageNames).
+func upTo() stage { return stage(max(0, slices.Index(stageNames, os.Getenv("E2E_STAGE")))) }
+
+// newRepo is a new repo, made the README's way: an empty folder with its own git, mise-cloudflare init at the release
+// version names (this checkout's build without one), then cloudflare:template. It has its own git, not on GitHub,
+// where connect-github's steps push, so it walks as far as deploy.
+func newRepo(r walk.Repo, version string) walk.Repo {
+	switch {
+	case *adoptFlag != "":
+		r.T.Fatal("an adopted copy is the third-party repo's own, with its own git, not on GitHub: walk it alone, as far as deploy")
+	case upTo() == connectGithub:
+		r.T.Fatal("a stamped copy has its own git, not on GitHub, where connect-github's steps push: walk it as far as deploy")
+	}
+	return repo{Repo: r}.stampedCopy(version).Repo
 }
 
-// walkSteps runs the repo's numbered tasks in their order, as far as upTo, each with its check (mise_test.go checks
-// that steps are the template's numbered tasks, in their order). A walk that deploys starts by
-// deleting whatever a stopped one left on Cloudflare, and deletes what it made even when it fails.
-func walkSteps(t *testing.T, r repo, upTo stage) {
-	w := &walk{repo: r, upTo: upTo}
-	if upTo >= deploy {
+// prepare is the repo the walk walks instead, when it's not the one walk.Run made: a third-party Worker adopted as its
+// owner would (-adopt), or, for connect-github's steps, the same repo in a checkout of this repo at HEAD, which is what
+// Cloudflare builds from GitHub.
+func prepare(r walk.Repo) walk.Repo {
+	switch adopt := *adoptFlag != ""; {
+	case adopt && (*walk.Version != "" || upTo() == connectGithub):
+		r.T.Fatal("an adopted copy is the third-party repo's own, with its own git, not on GitHub: walk it alone, as far as deploy")
+	case adopt:
+		return repo{Repo: walk.At(r.T, *adoptFlag)}.adoptedCopy().Repo
+	case upTo() == connectGithub:
+		return repo{Repo: r}.checkoutOfHead().Repo
+	}
+	return r
+}
+
+// walker is the steps run on a repo in their order, as far as upTo, with what they leave for the steps after them.
+type walker struct {
+	repo
+	upTo       stage
+	before     walk.Files // the repo's files before the steps that deploy, which must change none of them
+	url        string     // the Worker's, once 08-deploy has deployed it
+	preview    string     // its preview's, once 11-preview has made it
+	prod, prev string     // the throwaway branches connect-github's steps push
+}
+
+// walkOf is the walk of a repo walk.Run has set up: its Worker read as wrangler reads it, and, for a walk that deploys,
+// whatever a stopped one left on Cloudflare deleted first, and deleted again when this one fails.
+func walkOf(r walk.Repo) *walker {
+	w := &walker{repo: repo{Repo: r, adopted: *adoptFlag != ""}, upTo: upTo()}
+	w.readWorker()
+	if w.upTo >= deploy {
 		w.miseDeleteEverythingOnCloudflare()
-		t.Cleanup(func() {
-			if t.Failed() {
-				w.heading("Cleaning up after the failure")
+		w.T.Cleanup(func() {
+			if w.T.Failed() {
+				w.Heading("Cleaning up after the failure")
 				w.miseDeleteEverythingOnCloudflare()
 			}
 		})
-		w.before = w.snapshot()
+		w.before = w.Snapshot(local...)
 	}
-	if upTo >= connectGithub {
+	if w.upTo >= connectGithub {
 		// The throwaway branches say whose they are and when (MMDD-HHMM).
 		when := time.Now().Format("0102-1504")
-		w.prod = "e2e-" + filepath.Base(w.name) + "-prod-" + when    // e2e-templates-prod-1030-1525
-		w.prev = "e2e-" + filepath.Base(w.name) + "-preview-" + when // e2e-templates-preview-1030-1525
+		w.prod = "e2e-" + filepath.Base(w.Name) + "-prod-" + when    // e2e-templates-prod-1030-1525
+		w.prev = "e2e-" + filepath.Base(w.Name) + "-preview-" + when // e2e-templates-preview-1030-1525
 		// Cloudflare names the preview <branch>-<worker>, and that part of its address can't pass 63 characters.
 		if label := previewAlias(w.prev) + "-" + w.worker; len(label) > 63 {
-			t.Fatalf("the preview's address would start %s, %d characters: Cloudflare allows 63", label, len(label))
+			w.T.Fatalf("the preview's address would start %s, %d characters: Cloudflare allows 63", label, len(label))
 		}
 	}
-	for _, s := range steps {
-		switch {
-		case s.stage > upTo:
-			w.pass("cloudflare:%s: for the stage %s, not this walk's (%s)", s.task, s.stage, upTo)
-		case s.skip != "":
-			w.pass("cloudflare:%s: %s", s.task, s.skip)
-		default:
-			w.heading("cloudflare:%s", s.task)
-			s.check(w)
-		}
-	}
-	fmt.Println("\nALL PASSED")
-}
-
-// snapshot is the repo's files by their content, all but what isn't the repo's own: its git, installed packages, and
-// the local state 06-serve and 15-clean make and undo.
-func (w *walk) snapshot() map[string][32]byte {
-	w.t.Helper()
-	out := map[string][32]byte{}
-	err := filepath.WalkDir(w.dir, func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		switch d.Name() {
-		case ".git", "node_modules", ".wrangler", ".dev.vars":
-			if d.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-		b, err := os.ReadFile(p)
-		if err != nil {
-			return err
-		}
-		rel, _ := filepath.Rel(w.dir, p)
-		out[rel] = sha256.Sum256(b)
-		return nil
-	})
-	if err != nil {
-		w.t.Fatal(err)
-	}
-	return out
-}
-
-// diff names the files added, removed or changed between two snapshots.
-func diff(a, b map[string][32]byte) []string {
-	var changed []string
-	for p, h := range b {
-		if a[p] != h {
-			changed = append(changed, p)
-		}
-	}
-	for p := range a {
-		if _, ok := b[p]; !ok {
-			changed = append(changed, p)
-		}
-	}
-	slices.Sort(changed)
-	return changed
+	return w
 }

@@ -226,10 +226,10 @@ it isn't a binary's tasks.
 | [templates/](templates/) | other repos' | the template: a sample Worker plus the tool's half, which `init` writes into a repo at the same paths (the tasks, the workflow, the Claude Code hook and settings, the agent skill, the docs, the `.gitignore`); [templates.go](templates/templates.go) lists that half |
 | [cmd/mise-cloudflare/](cmd/mise-cloudflare/) | other repos' | the command: a file per command, `x.go` holding `r.x`, which `main.go`'s `case "x"` calls |
 | [internal/](internal/) | other repos' | the login (`wrangler`), Cloudflare's cf (`cf`), Cloudflare's API decided on its status (`cfapi`), the Worker's config as wrangler reads it (`wconfig`), the rules (`rules`) |
-| [e2e_walk_test.go](e2e_walk_test.go), [e2e_steps_test.go](e2e_steps_test.go), [e2e_mise_test.go](e2e_mise_test.go), [e2e_cloudflare_test.go](e2e_cloudflare_test.go), [e2e_bindings_test.go](e2e_bindings_test.go) | this repo's | the walk: `TestWalk` and its stages; the steps, each with its check; the repo and the calls into its own mise file; what it looks at on Cloudflare; the extras |
+| [e2e_walk_test.go](e2e_walk_test.go), [e2e_steps_test.go](e2e_steps_test.go), [e2e_mise_test.go](e2e_mise_test.go), [e2e_cloudflare_test.go](e2e_cloudflare_test.go), [e2e_bindings_test.go](e2e_bindings_test.go) | this repo's | the walk, on [mise-check's `walk`](https://github.com/joeblew999/mise-check#use-walk), which runs the steps in their order and does everything that isn't Cloudflare's: `TestWalk` and its stages; the steps, each with its check; what's Cloudflare's in making a repo (a new one, an adopted Worker, a checkout of `HEAD`); what it looks at on Cloudflare; the extras |
 | [tool_test.go](tool_test.go) | this repo's | `TestToolRelease`, the release: only `mise run tool:release` runs it |
 | [repos.txt](repos.txt), `repos/` | this repo's | the corpus's repos, and their clones (git-ignored) |
-| [mise_test.go](mise_test.go) | this repo's, for now | the mise ↔ Go checker, `TestMise` |
+| [mise_test.go](mise_test.go) | this repo's | `TestMise`: [mise-check's `misecheck`](https://github.com/joeblew999/mise-check) on a mise file of this repo and the Go it runs, both ways |
 | [.claude/](.claude/), [.github/workflows/](.github/workflows/) | this repo's | its own Claude Code hook and its own workflows; other repos get theirs from `templates/` |
 
 ### CI and releases

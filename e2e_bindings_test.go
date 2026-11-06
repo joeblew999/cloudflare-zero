@@ -59,20 +59,20 @@ func remoteExtras() bool {
 
 // addExtras writes the extras into the repo's wrangler.jsonc, as a developer adds bindings at its top level.
 func (r repo) addExtras() {
-	path := filepath.Join(r.dir, "wrangler.jsonc")
+	path := filepath.Join(r.Dir, "wrangler.jsonc")
 	b, err := os.ReadFile(path)
 	end := bytes.LastIndexByte(b, '}')
 	if err != nil || end < 0 {
-		r.t.Fatalf("%s: %v", path, err)
+		r.T.Fatalf("%s: %v", path, err)
 	}
 	out := bytes.TrimRight(b[:end], " \n")
 	for _, e := range extras {
 		out = append(out, ",\n  "+strings.ReplaceAll(e.add, "{worker}", stampedWorker)...)
 	}
 	if err := os.WriteFile(path, append(append(out, '\n'), b[end:]...), 0o644); err != nil {
-		r.t.Fatal(err)
+		r.T.Fatal(err)
 	}
-	r.pass("the developer adds %d binding(s) beyond the template's to wrangler.jsonc: the extras", len(extras))
+	r.Pass("the developer adds %d binding(s) beyond the template's to wrangler.jsonc: the extras", len(extras))
 }
 
 // extraOn is the resource Cloudflare's API lists on the account for an extra and worker, <worker>-<suffix> (worker is
@@ -81,7 +81,7 @@ func (r repo) extraOn(token, account string, e extra, worker string) map[string]
 	got, err := cfapi.Call(context.Background(), token, http.MethodGet, "/accounts/"+account+e.list, nil, "")
 	var items []map[string]any
 	if err != nil || !got.OK() || json.Unmarshal(got.Result, &items) != nil {
-		r.t.Fatalf("Cloudflare's %s: %v %s", e.list, err, got.Said())
+		r.T.Fatalf("Cloudflare's %s: %v %s", e.list, err, got.Said())
 	}
 	for _, it := range items {
 		if it[e.field] == worker+"-"+e.suffix {
@@ -143,19 +143,19 @@ func withEnv() string { return os.Getenv("E2E_ENV") }
 // steps run in it (CLOUDFLARE_ENV).
 func (r repo) addEnv(env string) {
 	if withExtras() {
-		r.t.Fatal("the extras are at the config's top level, which an environment doesn't inherit: walk them alone")
+		r.T.Fatal("the extras are at the config's top level, which an environment doesn't inherit: walk them alone")
 	}
-	path := filepath.Join(r.dir, "wrangler.jsonc")
+	path := filepath.Join(r.Dir, "wrangler.jsonc")
 	b, err := os.ReadFile(path)
 	end := bytes.LastIndexByte(b, '}')
 	if err != nil || end < 0 {
-		r.t.Fatalf("%s: %v", path, err)
+		r.T.Fatalf("%s: %v", path, err)
 	}
 	block := `"env": { "` + env + `": { "d1_databases": [{ "binding": "DB" }], "kv_namespaces": [{ "binding": "KV" }], "r2_buckets": [{ "binding": "BUCKET" }], "secrets": { "required": ["GREETING"] } } }`
 	out := append(bytes.TrimRight(b[:end], " \n"), ",\n  "+block+"\n"...)
 	if err := os.WriteFile(path, append(out, b[end:]...), 0o644); err != nil {
-		r.t.Fatal(err)
+		r.T.Fatal(err)
 	}
-	r.t.Setenv("CLOUDFLARE_ENV", env)
-	r.pass("the developer adds env.%s to wrangler.jsonc, with its own D1, KV, R2 and secret, and every step runs in it (CLOUDFLARE_ENV=%s)", env, env)
+	r.T.Setenv("CLOUDFLARE_ENV", env)
+	r.Pass("the developer adds env.%s to wrangler.jsonc, with its own D1, KV, R2 and secret, and every step runs in it (CLOUDFLARE_ENV=%s)", env, env)
 }
