@@ -14,7 +14,7 @@ description = "writes mise-check's files again: its tasks, the workflow, the ski
 run = "mise-check init"
 
 ["mise-check:check"]
-description = "the repo's rules: its mise files by misecheck, its skills against their tasks, mise-check's files current, its two pins (the binary in mise, the packages in go.mod) at one release"
+description = "the repo's rules: its mise files by misecheck, its skills against their tasks, its README's opening, mise-check's files current, its two pins (the binary in mise, the packages in go.mod) at one release"
 usage = 'flag "--json" help="one JSON document on stdout, instead of text"'
 run = 'mise-check check{% if usage.json %} --json{% endif %}'
 

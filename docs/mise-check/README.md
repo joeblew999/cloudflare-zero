@@ -56,24 +56,56 @@ mise run root:ci
 It runs mise-check's newest release, as `init` does in [A new repo](#a-new-repo). Without its GitHub repo, `new-tool` stops and says to make it.
 
 It copies mise-check at that release, everything git holds, from Go's module proxy, as `go get` has it; renames
-`mise-check` to `<name>` in every file's name and contents; and drops the three packages, `misecheck`, `walk` and
-`miseconfig`, which the new repo imports from mise-check instead, pinned at that release. Its README is a short one,
-saying what to do next. `root:ci` passes from the start. Then you remove what the new tool doesn't need, and misecheck
-names what's left of each command you remove.
+`mise-check` to `<name>` in every file's name and contents; and drops mise-check's packages (`misecheck`, `walk`,
+`release`, `toolfiles`, `miseconfig`), which the new repo imports from mise-check instead, pinned at that release. Its
+README is a short one, saying what to do next. `root:ci` passes from the start. Then you remove what the new tool
+doesn't need, and misecheck names what's left of each command you remove.
 
-Its init is mise-check's, renamed: it keeps the new tool's parts of a repo's own `.mise/config.toml` with
-`miseconfig`, as any tool's init can:
+### The rules a tool repo follows
 
-```go
-t := miseconfig.Tool{Name: "github:<owner>/<name>", Release: "0.1.0", Template: tmpl, Init: "mise run <name>:init"}
-b, err := t.Pinned()        // a repo with no .mise/config.toml: the template's, pinned at this release
-out, wrote := t.Keep(own)   // a repo's own: the tool's parts as this release writes them, what it wrote, the rest as it was
-problems := t.Problems(own) // what the tool's check reports of it, each naming t.Init
-```
+Every mise tool repo has one shape: mise-check's own, every one `new-tool` makes, mise-cloudflare's, mise-intl's.
+The shared machinery is mise-check's packages, imported at the release `.mise/config.toml` pins, never copied.
 
-Its parts are the tool's pin (added, or moved forward to the release; `local` and `latest` stay), its own name in
-`minimum_release_age_excludes`, `use_versions_host = false`, and the comment at the file's top when the file is the
-tool's (it starts `# <name> `), each with its comment from the template's `.mise/config.toml` (`tmpl`).
+1. **One CI command.** `root:ci` in its `mise.toml` is exactly what GitHub's CI runs: `root:verify` (the checks and
+   the walks), then anything only CI adds. `.github/workflows/ci.yml` runs `mise run root:ci` and nothing else of its
+   own, on a push to main and on a pull request: never on a tag, nor on every branch's push.
+2. **Its release is `release`.** One test, run by its `tool:release` task, which `release.yml` runs on main:
+
+   ```go
+   func TestToolRelease(t *testing.T) { release.Run(t, release.Config{NewRepo: "new-repo:e2e"}) }
+   ```
+
+   The commit's `v*` tag or the next patch, tagged and pushed; goreleaser's binaries on its GitHub release; a new repo
+   made at it and walked (`new-repo:e2e --version <tag>`); the version on proxy.golang.org. `-dry-run` (the task's
+   `--dry-run`) tags and publishes nothing.
+3. **Its init is `toolfiles`.** It writes the template's tool half into a repo, and its check reports what of it a
+   repo lacks:
+
+   ```go
+   t := toolfiles.Tool{Files: templates.Tool, Hook: "<name>-session-start.sh", Config: miseconfig.Tool{
+   	Name: "github:<owner>/<name>", Release: "0.1.0", Template: tmpl, Init: "mise run <name>:init"}}
+   err := t.Write(dir)          // init: every file; of the repo's own three, only the tool's parts
+   problems := t.Problems(dir)  // check: each naming Config.Init
+   ```
+
+   The repo's own `.mise/config.toml`, `.gitignore` and `.claude/settings.json` keep everything of theirs. In
+   `.mise/config.toml` (`miseconfig`) the tool's parts are its pin (added, or moved forward to the release; `local`
+   and `latest` stay), its own name in `minimum_release_age_excludes`, `use_versions_host = false`, and the comment
+   at the file's top when the file is the tool's (it starts `# <name> `), each with its comment from the template's
+   `.mise/config.toml` (`tmpl`).
+4. **No task wraps mise-check's.** A tool's template has no task that runs `mise-check`: its init calls
+   `toolfiles.MiseCheckInit(dir)`, which runs mise-check's own init in the repo, at the release of mise-check the tool
+   is built with (its go.mod's), so the tool's users run `mise run mise-check:<command>` themselves.
+5. **No task is numbered.** Every task is `<namespace>:<command>`. The order a repo meets them is in the walk (the
+   root's end-to-end test runs the template's tasks by name, in a person's order, held to the tasks file by
+   `walk.CheckSteps`), the docs page and what `mise run <namespace>` says next, never in names.
+6. **Its README opens with the problem.** Right after its title and badges, a paragraph starting `**The problem.**`
+   (what's hard without it), then one starting `**What <name> does.**` (how it solves it). Every repo's does, a tool's
+   or an app's: `mise-check:check` reports a README.md without both in the 30 lines after its title.
+7. **misecheck holds it to these.** Its test of its root mise file calls `misecheck.CheckToolRepo(t, ".")` beside
+   `Check`, which fails on a missing `root:ci` or `root:verify`, a ci.yml that runs anything else or on tags or every
+   branch, a README without its two openings, and a template task that runs mise-check, each saying what to change;
+   `Check` itself fails a numbered task, in any mise file, and `mise-check:check` runs it on every repo's.
 
 ## The tasks
 
@@ -81,7 +113,7 @@ tool's (it starts `# <name> `), each with its comment from the template's `.mise
 |---|---|---|
 | `mise run mise-check` | first, and whenever you're unsure | what's done for the repo, and what to run next |
 | `mise run mise-check:init` | after upgrading mise-check | writes mise-check's files again: its tasks, the workflow, the skill, the docs, the hook |
-| `mise run mise-check:check` | after any change to a mise file or a skill; when it fails, fix the side it names | the repo's rules: its mise files by misecheck, its skills against their tasks, mise-check's files current, its two pins (the binary in mise, the packages in go.mod) at one release |
+| `mise run mise-check:check` | after any change to a mise file or a skill; when it fails, fix the side it names | the repo's rules: its mise files by misecheck, its skills against their tasks, its README's opening, mise-check's files current, its two pins (the binary in mise, the packages in go.mod) at one release |
 | `mise run mise-check:show` | to see where the repo is | the same as mise run mise-check |
 | `mise run mise-check:verify` | before every push | what GitHub runs: each pin consistent with what pins it, the repo's setup and test, then check |
 | `mise run mise-check:update` | when the person asks to upgrade everything | every pin at its newest: the three below, in order, then mise-check's two pins at one release |
@@ -207,7 +239,9 @@ var myWalk = walk.Walk[*myRepo]{Steps: steps, New: newRepo, Of: func(r walk.Repo
 
 func TestWalkTemplate(t *testing.T) { myWalk.Template(t, "templates") }
 func TestWalkNewRepo(t *testing.T)   { myWalk.NewRepo(t) }
-func TestSteps(t *testing.T)         { walk.CheckSteps(t, "templates/.mise/tasks/mytool.toml", steps) }
+func TestSteps(t *testing.T) {
+	walk.CheckSteps(t, "templates/.mise/tasks/mytool.toml", steps, map[string]string{"mytool:show-help": "it only prints the commands"})
+}
 ```
 
 Which repo is the test's name: `Template` walks your template where it is, `NewRepo` a new repo made from nothing by
@@ -225,16 +259,18 @@ run = 'go test . -run "^TestWalkNewRepo$" -count=1 -v{% if usage.version %} -arg
 | `-version` | The release a new repo is made at (default this checkout's build) |
 | `-stage` | How far to walk, when your steps have stages (default the first) |
 
-For a tool whose steps are numbered in the order a repo takes them (mise-cloudflare's `cloudflare:03-init` to
-`15-clean`), `CheckSteps` fails unless your steps are exactly your mise file's numbered tasks, in their order; a tool
-with few steps (mise-check's `init`, `check`, `show`) needs no numbers, and no `TestSteps`. Either way, misecheck
-(`GoCallers`) checks that every task name your steps use is a task. When the repo walked needs something its own mise
+No task is numbered: every task is `<namespace>:<command>`, and misecheck fails one named `<namespace>:03-<command>`.
+The order a repo meets its tasks is the walk's, your steps in a person's order, and the docs page's and what
+`mise run <namespace>` says next, never the tasks' names. `CheckSteps` holds the steps to your tasks file: each step
+is a task of it, and every task of it is a step or in the map of tasks not walked, each with why, so a task added,
+renamed or removed, and the walk says so. misecheck (`GoCallers`) checks that every task name your steps use is a
+task. When the repo walked needs something its own mise
 files can't give it, cut off from the repo around it, `Prepare` adds it (mise-check's own gives its template, a folder of
 its module with no `go.mod` of its own, that module's Go).
 
 ## What misecheck checks, in full
 
-Every task: its `run` and `usage` are each one line; it declares its flags and arguments in mise's `usage` and passes
+Every task: its name is `<namespace>:<command>`, never numbered (`<namespace>:03-<command>`); its `run` and `usage` are each one line; it declares its flags and arguments in mise's `usage` and passes
 each by name with mise's templates (`{% if usage.yes %} --yes{% endif %}`); its run has no POSIX shell syntax
 (`${…}`, `$name`, `NAME=value cmd`), which Windows' cmd doesn't read.
 
