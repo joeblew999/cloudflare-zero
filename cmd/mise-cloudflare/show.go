@@ -33,14 +33,14 @@ type statusReport struct {
 	// The config's compatibility_date, and the one this wrangler's dev uses when a config gives none.
 	CompatibilityDate string   `json:"compatibilityDate"`
 	DevDate           string   `json:"devDate"`
-	Remote            []string `json:"remote"` // the bindings wrangler runs on Cloudflare even locally: 06-serve needs the login
+	Remote            []string `json:"remote"` // the bindings wrangler runs on Cloudflare even locally: cloudflare:serve needs the login
 	Build             string   `json:"build"`  // the package's own build, which runs before wrangler does (rules.Build), or ""
 	StrayTokens       []string `json:"strayTokens"`
 	Problems          []string `json:"problems"` // cloudflare check's: a deploy would fail on them, or leak
 	Next              string   `json:"next"`
 }
 
-// show is mise-cloudflare with no command or show (mise run cloudflare, cloudflare:05-show): the steps in order, which are done for this repo, and the
+// show is mise-cloudflare with no command or show (mise run cloudflare, cloudflare:show): the steps in order, which are done for this repo, and the
 // next one. It never logs in.
 func (r repo) show(ctx context.Context, jsonOut bool) {
 	rep := statusReport{Worker: r.wc.Name, Profile: r.w.Profile, CompatibilityDate: r.wc.CompatibilityDate, DevDate: r.wc.DevDate, Remote: append([]string{}, r.wc.Remote...), Build: rules.Build(r.dir), Accounts: []wrangler.Account{}, Scopes: []string{},
@@ -99,21 +99,21 @@ func (r repo) show(ctx context.Context, jsonOut bool) {
 	case len(rep.StrayTokens) > 0:
 		rep.Next = "remove the Cloudflare token or key (" + strings.Join(strayVars, ", ") + ") in " + strings.Join(rep.StrayTokens, " and ") + ": it would override the repo's login"
 	case len(rep.Problems) > 0:
-		rep.Next = "fix what mise run cloudflare:04-check lists, first: " + rep.Problems[0]
+		rep.Next = "fix what mise run cloudflare:check lists, first: " + rep.Problems[0]
 	case len(rep.Secrets) > 0:
-		rep.Next = "mise run cloudflare:07-set-secrets (it asks for " + strings.Join(rep.Secrets, ", ") + ")"
+		rep.Next = "mise run cloudflare:set-secrets (it asks for " + strings.Join(rep.Secrets, ", ") + ")"
 	case !rep.Deployed:
-		rep.Next = "mise run cloudflare:08-deploy"
+		rep.Next = "mise run cloudflare:deploy"
 	case len(previewProblems) > 0:
-		rep.Next = previewProblems[0] + "; then mise run cloudflare:09-connect-github"
+		rep.Next = previewProblems[0] + "; then mise run cloudflare:connect-github"
 	case rep.GitHubCantTell != "":
 		rep.Next = "mise run cloudflare: it brings cf, and shows whether Workers Builds deploys it yet"
 	case rep.GitHub == "":
-		rep.Next = "mise run cloudflare:09-connect-github"
+		rep.Next = "mise run cloudflare:connect-github"
 	case len(previewSecrets) > 0:
-		rep.Next = "mise run cloudflare:10-set-preview-secrets (it asks for " + strings.Join(previewSecrets, ", ") + ": previews don't get the Worker's secrets)"
+		rep.Next = "mise run cloudflare:set-preview-secrets (it asks for " + strings.Join(previewSecrets, ", ") + ": previews don't get the Worker's secrets)"
 	case len(previewsMissing) > 0:
-		rep.Next = "mise run cloudflare:09-connect-github: previews don't have their own " + strings.Join(previewsMissing, ", ") + " yet"
+		rep.Next = "mise run cloudflare:connect-github: previews don't have their own " + strings.Join(previewsMissing, ", ") + " yet"
 	default:
 		rep.Next = "push a branch and open a pull request: its preview's link comes on the pull request"
 	}
@@ -131,7 +131,7 @@ func (r repo) show(ctx context.Context, jsonOut bool) {
 			filepath.Base(r.wc.Path), "env."+strings.Join(r.wc.Envs, ", env."), r.wc.Envs[0])
 	}
 	if rep.Build != "" {
-		fmt.Printf("  built first: %s (package.json's build script), before 06-serve, 08-deploy, 11-preview and Cloudflare's builds\n", rep.Build)
+		fmt.Printf("  built first: %s (package.json's build script), before cloudflare:serve, cloudflare:deploy, cloudflare:preview and Cloudflare's builds\n", rep.Build)
 	}
 	file := filepath.Base(r.wc.Path)
 	// wrangler itself says when the date is later than its local runtime has (wrangler dev falls back, and says so).
@@ -141,28 +141,28 @@ func (r repo) show(ctx context.Context, jsonOut bool) {
 		fmt.Printf("  compatibility date %s\n", rep.CompatibilityDate)
 	}
 	if len(rep.Problems) > 0 {
-		fmt.Printf("  ✗ the repo has %d problem(s) to fix first (mise run cloudflare:04-check lists them)\n", len(rep.Problems))
+		fmt.Printf("  ✗ the repo has %d problem(s) to fix first (mise run cloudflare:check lists them)\n", len(rep.Problems))
 	}
 	run := ""
 	if len(rep.Remote) > 0 {
 		run = "   " + strings.Join(rep.Remote, ", ") + " on Cloudflare even here, on the repo's login" + map[bool]string{true: "", false: ", which it makes first (you click Allow)"}[rep.LoggedIn]
 	}
-	fmt.Printf("  ✓ 06. Run it locally     mise run cloudflare:06-serve%s\n", run)
-	fmt.Printf("  %s 08. Deploy it          mise run cloudflare:08-deploy   %s\n", mark[rep.Deployed], cmp.Or(rep.URL, map[bool]string{true: "deployed", false: "not deployed yet"}[rep.Deployed]))
+	fmt.Printf("  ✓ Run it locally     mise run cloudflare:serve%s\n", run)
+	fmt.Printf("  %s Deploy it          mise run cloudflare:deploy   %s\n", mark[rep.Deployed], cmp.Or(rep.URL, map[bool]string{true: "deployed", false: "not deployed yet"}[rep.Deployed]))
 	if len(rep.Secrets) > 0 {
-		fmt.Printf("    first, its secrets: %s (mise run cloudflare:07-set-secrets)\n", strings.Join(rep.Secrets, ", "))
+		fmt.Printf("    first, its secrets: %s (mise run cloudflare:set-secrets)\n", strings.Join(rep.Secrets, ", "))
 	}
 	switch {
 	case rep.GitHub != "":
-		fmt.Printf("  ✓ 09. Deploy every push  %s deploys it: a preview for every pull request\n", rep.GitHub)
+		fmt.Printf("  ✓ Deploy every push  %s deploys it: a preview for every pull request\n", rep.GitHub)
 	case rep.GitHubCantTell != "":
-		fmt.Printf("  ? 09. Deploy every push  mise run cloudflare:09-connect-github   can't tell here whether it's done: %s\n", rep.GitHubCantTell)
+		fmt.Printf("  ? Deploy every push  mise run cloudflare:connect-github   can't tell here whether it's done: %s\n", rep.GitHubCantTell)
 	default:
-		fmt.Printf("  · 09. Deploy every push  mise run cloudflare:09-connect-github   a preview for every pull request, then staging and production\n")
+		fmt.Printf("  · Deploy every push  mise run cloudflare:connect-github   a preview for every pull request, then staging and production\n")
 	}
 	switch {
 	case !rep.Profiles:
-		fmt.Printf("  login: none; the repo's wrangler, %s, can't hold one (mise run cloudflare:04-check says why)\n", r.w.Version())
+		fmt.Printf("  login: none; the repo's wrangler, %s, can't hold one (mise run cloudflare:check says why)\n", r.w.Version())
 	case !rep.LoggedIn:
 		fmt.Printf("  login: none yet; deploying makes it (you click Allow)\n")
 	case len(rep.Accounts) > 0:
@@ -232,7 +232,7 @@ func (r repo) buildsConnected(ctx context.Context) (connected bool, cantTell str
 	if err != nil {
 		return false, err.Error()
 	}
-	// Not logged in yet, cf's login is made by cloudflare:09-connect-github, which then connects it or says it is.
+	// Not logged in yet, cf's login is made by cloudflare:connect-github, which then connects it or says it is.
 	if !who.Authenticated || len(who.Accounts) != 1 {
 		return false, ""
 	}

@@ -16,11 +16,11 @@ import (
 	"github.com/joeblew999/mise-cloudflare/templates"
 )
 
-// commands is every mise-cloudflare command, in the order of a repo's tasks: the numbered steps 03 to 14, then the rest.
+// commands is every mise-cloudflare command, in the order of a repo's tasks: the steps, init to clean, then the rest.
 var commands = []string{"init", "check", "show", "serve", "set-secrets", "deploy", "connect-github", "set-preview-secrets", "preview", "login", "delete", "logout", "clean", "verify", "update", "template", "run-wrangler", "show-version", "show-help"}
 
-// taskVerb is the command a task's name names: cloudflare:08-deploy names deploy, cloudflare:verify names verify.
-var taskVerb = regexp.MustCompile(`^cloudflare:(?:\d\d-)?([a-z][a-z-]*)$`)
+// taskVerb is the command a task's name names: cloudflare:deploy names deploy.
+var taskVerb = regexp.MustCompile(`^cloudflare:([a-z][a-z-]*)$`)
 
 // TestSkill: the skill installs where Claude Code finds it, and names its tasks right.
 func TestSkill(t *testing.T) {

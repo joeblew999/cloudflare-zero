@@ -40,7 +40,7 @@ func (r repo) serve(ctx context.Context, args []string) {
 	if err := wrangler.Interactive(dev); err != nil {
 		// Not when it was stopped (Ctrl-C).
 		if code := exitCode(err); code != -1 && code != 130 && remote != "" {
-			fmt.Printf("· %s runs on Cloudflare even here: if wrangler couldn't reach it above, its resource must be there first (mise run cloudflare:08-deploy makes the ones wrangler makes, an AI Search namespace among them; any other you make yourself), then this again\n", remote)
+			fmt.Printf("· %s runs on Cloudflare even here: if wrangler couldn't reach it above, its resource must be there first (mise run cloudflare:deploy makes the ones wrangler makes, an AI Search namespace among them; any other you make yourself), then this again\n", remote)
 		}
 		os.Exit(exitCode(err))
 	}

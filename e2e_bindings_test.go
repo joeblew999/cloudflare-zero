@@ -1,7 +1,7 @@
 // The extras: bindings of kinds beyond the template's KV, D1 and R2, which the walk adds to a new repo's wrangler
 // config as a developer would (mise run new-repo:e2e-extras, E2E_EXTRAS=true), to show on Cloudflare that wrangler
-// deploy makes each one, cloudflare:11-preview makes the previews' own and binds it, and cloudflare:13-delete deletes
-// both, and that cloudflare:06-serve runs one wrangler runs on Cloudflare even locally, on the repo's login. The template itself stays as minimal as it is. A kind is one row.
+// deploy makes each one, cloudflare:preview makes the previews' own and binds it, and cloudflare:delete deletes
+// both, and that cloudflare:serve runs one wrangler runs on Cloudflare even locally, on the repo's login. The template itself stays as minimal as it is. A kind is one row.
 
 package e2e
 
@@ -31,7 +31,7 @@ type extra struct {
 
 // Of the kinds wrangler deploy makes, these aren't here: Dispatch Namespaces, which this account can't make (403:
 // Workers for Platforms, a purchase), and AI Search and Agent Memory namespaces, which wrangler requires the config to
-// name: the developer's, which 13-delete leaves (and says so), so a walk would leave them on the account.
+// name: the developer's, which cloudflare:delete leaves (and says so), so a walk would leave them on the account.
 var extras = []extra{
 	{add: `"queues": { "producers": [{ "binding": "JOBS" }] }`, binding: "JOBS", list: "/queues", field: "queue_name", id: "queue_id", suffix: "jobs"},
 	{add: `"flagship": [{ "binding": "FLAGS" }]`, binding: "FLAGS", list: "/flagship/apps", field: "name", id: "id", suffix: "flags"},

@@ -1,7 +1,7 @@
 # mise-cloudflare's own tasks, for working on it. Run every task here, at the top: everything is driven from this file.
 #
-# The steps a person takes are a repo's own numbered tasks (cloudflare:03-init to 15-clean, in its .mise/tasks). The walk
-# (TestWalkTemplate, TestWalkNewRepo, …, e2e_*_test.go) runs them in order, on the template or on a copy stamped out from it.
+# The steps a person takes are a repo's own tasks (cloudflare:init to cloudflare:clean, in its .mise/tasks). The walk
+# (TestWalkTemplate, TestWalkNewRepo, …, e2e_*_test.go) runs them in their order, on the template or on a copy stamped out from it.
 # This file is only what the root does itself, each task named for what it acts on (noun:verb):
 #   template: the template, templates/
 #     mise run template:e2e-serve      TestWalkTemplate on it, as far as the stage serve (-args -stage serve)
@@ -46,17 +46,17 @@ description = "TestTemplateMise on the template's mise file against Go, and only
 run = 'go test . -run "^TestTemplateMise$" -count=1 -v'
 
 [tasks."template:e2e-serve"]
-description = "TestWalkTemplate on the template, templates/, as far as the stage serve (06-serve, needing nothing): its numbered tasks in their order, through its own mise file, each checked (e2e_walk_test.go). After tool:install"
+description = "TestWalkTemplate on the template, templates/, as far as the stage serve (cloudflare:serve, needing nothing): its steps' tasks in their order, through its own mise file, each checked (e2e_walk_test.go). After tool:install"
 depends = ["tool:install"]
 run = 'go test . -run "^TestWalkTemplate$" -count=1 -v -timeout 10m -args -stage serve'
 
 [tasks."template:e2e-deploy"]
-description = "TestWalkTemplate on the template, templates/, as far as the stage deploy (08-deploy, needing a Cloudflare account): its Worker deployed on its own login, checked live, then deleted (e2e_walk_test.go). The first time, an Allow. After tool:install"
+description = "TestWalkTemplate on the template, templates/, as far as the stage deploy (cloudflare:deploy, needing a Cloudflare account): its Worker deployed on its own login, checked live, then deleted (e2e_walk_test.go). The first time, an Allow. After tool:install"
 depends = ["tool:install"]
 run = 'go test . -run "^TestWalkTemplate$" -count=1 -v -timeout 30m -args -stage deploy'
 
 [tasks."template:e2e-connect-github"]
-description = "TestWalkTemplate on the template, as far as the stage connect-github (09-connect-github, needing GitHub too), in a checkout of this repo at HEAD, as Cloudflare builds it: Workers Builds builds production from a throwaway branch, a pull request's branch gets its own preview, gone with its branch; then everything deleted. About 7 minutes: it waits on Cloudflare's builds. After tool:install"
+description = "TestWalkTemplate on the template, as far as the stage connect-github (cloudflare:connect-github, needing GitHub too), in a checkout of this repo at HEAD, as Cloudflare builds it: Workers Builds builds production from a throwaway branch, a pull request's branch gets its own preview, gone with its branch; then everything deleted. About 7 minutes: it waits on Cloudflare's builds. After tool:install"
 depends = ["tool:install"]
 run = 'go test . -run "^TestWalkTemplate$" -count=1 -v -timeout 90m -args -stage connect-github'
 
@@ -72,19 +72,19 @@ description = "TestRootMise on this repo's own mise.toml, the mise side: each ta
 run = 'go test . -run "^TestRootMise$" -count=1 -v'
 
 [tasks."new-repo:e2e-serve"]
-description = "TestWalkNewRepo: a new repo, made as a person makes one (an empty folder with its own git, mise-cloudflare init, then its own cloudflare:template: the template's Worker named for the folder, mise-cloudflare-new), in a folder of its own that goes when the walk ends; as far as the stage serve (06-serve, needing nothing). It pins this checkout's build (local), or a release with --version, as the release tries it. After tool:install"
+description = "TestWalkNewRepo: a new repo, made as a person makes one (an empty folder with its own git, mise-cloudflare init, then its own cloudflare:template: the template's Worker named for the folder, mise-cloudflare-new), in a folder of its own that goes when the walk ends; as far as the stage serve (cloudflare:serve, needing nothing). It pins this checkout's build (local), or a release with --version, as the release tries it. After tool:install"
 usage = 'flag "--version <version>" help="pin this release of mise-cloudflare from GitHub, as mise use does, instead of the build of this checkout"'
 depends = ["tool:install"]
 run = 'go test . -run "^TestWalkNewRepo$" -count=1 -v -timeout 10m -args -stage serve{% if usage.version %} -version "{{usage.version}}"{% endif %}'
 
 [tasks."new-repo:e2e-deploy"]
-description = "TestWalkNewRepo: a new repo, as new-repo:e2e-serve makes it, as far as the stage deploy (08-deploy, needing a Cloudflare account): its Worker, mise-cloudflare-new, deployed on its own login, checked live, then deleted. No connect-github: the copy has its own git, not on GitHub, which Workers Builds builds from. The first time, an Allow. After tool:install"
+description = "TestWalkNewRepo: a new repo, as new-repo:e2e-serve makes it, as far as the stage deploy (cloudflare:deploy, needing a Cloudflare account): its Worker, mise-cloudflare-new, deployed on its own login, checked live, then deleted. No connect-github: the copy has its own git, not on GitHub, which Workers Builds builds from. The first time, an Allow. After tool:install"
 usage = 'flag "--version <version>" help="pin this release of mise-cloudflare from GitHub, as mise use does, instead of the build of this checkout"'
 depends = ["tool:install"]
 run = 'go test . -run "^TestWalkNewRepo$" -count=1 -v -timeout 30m -args -stage deploy{% if usage.version %} -version "{{usage.version}}"{% endif %}'
 
 [tasks."new-repo:e2e-extras"]
-description = "new-repo:e2e-deploy with extras: the new repo's developer adds bindings beyond the template's KV, D1 and R2 first (e2e_bindings_test.go: a Queue, a Flagship app, and Workers AI, which wrangler runs on Cloudflare even locally), which wrangler deploy makes and cloudflare:13-delete must delete, and cloudflare:06-serve must stop before wrangler dev with no login (in CI) and run on the repo's login, all checked on Cloudflare. The template stays as minimal as it is. After tool:install"
+description = "new-repo:e2e-deploy with extras: the new repo's developer adds bindings beyond the template's KV, D1 and R2 first (e2e_bindings_test.go: a Queue, a Flagship app, and Workers AI, which wrangler runs on Cloudflare even locally), which wrangler deploy makes and cloudflare:delete must delete, and cloudflare:serve must stop before wrangler dev with no login (in CI) and run on the repo's login, all checked on Cloudflare. The template stays as minimal as it is. After tool:install"
 depends = ["tool:install"]
 run = 'go test . -run "^TestWalkNewRepoExtras$" -count=1 -v -timeout 30m -args -stage deploy'
 
@@ -94,7 +94,7 @@ depends = ["tool:install"]
 run = 'go test . -run "^TestWalkNewRepoEnv$" -count=1 -v -timeout 30m -args -stage deploy'
 
 [tasks."repos:e2e-adopt"]
-description = "TestWalkAdopt: a third-party Worker of the corpus, adopted as its owner would: its folder (as repos:check cloned it, repos/<owner>/<repo>/...) copied into a repo of its own with its own git, mise-cloudflare init at this checkout's build, its own install by its lockfile, its wrangler moved as the tool says when it has no auth profiles, then its numbered tasks as far as the stage deploy: deployed on its own login, checked live, then deleted, nothing of it left on Cloudflare. The first time, an Allow. After tool:install and repos:check"
+description = "TestWalkAdopt: a third-party Worker of the corpus, adopted as its owner would: its folder (as repos:check cloned it, repos/<owner>/<repo>/...) copied into a repo of its own with its own git, mise-cloudflare init at this checkout's build, its own install by its lockfile, its wrangler moved as the tool says when it has no auth profiles, then its steps' tasks as far as the stage deploy: deployed on its own login, checked live, then deleted, nothing of it left on Cloudflare. The first time, an Allow. After tool:install and repos:check"
 usage = 'arg "<path>" help="the Worker folder in repos/, as repos:check cloned it: repos/cloudflare/realtime-examples/video-to-jpeg"'
 depends = ["tool:install"]
 run = 'go test . -run "^TestWalkAdopt$" -count=1 -v -timeout 30m -args -stage deploy -adopt "{{usage.path}}"'

@@ -27,7 +27,7 @@ func (r repo) setSecrets(ctx context.Context, previews bool) {
 	var missing []string
 	if previews {
 		if !r.deployed(ctx) {
-			fail(errors.New("previews' secrets go in the Worker's Previews Base: deploy it first (mise run cloudflare:08-deploy)"))
+			fail(errors.New("previews' secrets go in the Worker's Previews Base: deploy it first (mise run cloudflare:deploy)"))
 		}
 		if len(who.Accounts) != 1 {
 			fail(fmt.Errorf("the login %s can use %d accounts; log it in again and pick one", r.w.Profile, len(who.Accounts)))

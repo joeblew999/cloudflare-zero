@@ -15,7 +15,7 @@ func (r repo) logout(ctx context.Context) {
 	}
 	if !cf.Installed() {
 		fmt.Printf("✓ %s's wrangler login is logged out and deleted\n", r.w.Profile)
-		fmt.Printf("· cf doesn't run here, so its login for Workers Builds, if there is one, is still there: mise run cloudflare:14-logout brings cf and logs out both\n")
+		fmt.Printf("· cf doesn't run here, so its login for Workers Builds, if there is one, is still there: mise run cloudflare:logout brings cf and logs out both\n")
 		return
 	}
 	c := cf.CF{Dir: r.dir, Profile: r.w.Profile}

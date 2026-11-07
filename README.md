@@ -21,12 +21,12 @@ ends up doing them a little differently, or not at all:
 
 **What mise-cloudflare does.** It does all of that through [mise](https://mise.jdx.dev), for any repo with a wrangler
 config, whatever is in it: the repo's own pinned wrangler reads the config, runs it and deploys it, and mise-cloudflare
-never parses one. One command adds it to a repo, and from then on every step is a mise task, numbered in the order you
-need them. Each one says what it did and what to run next, and `mise run cloudflare` shows where the repo is at any
-time. The logins are wrangler's and cf's own, made once per machine when you click **Allow**; GitHub never holds a
-Cloudflare credential. Every version is pinned, and one task, `mise run cloudflare:update`, moves them all, by
-[mise-check](https://github.com/joeblew999/mise-check), whose job pins are. CI checks it
-on macOS, Linux and Windows, and it sets itself up in a Claude Code cloud session.
+never parses one. One command adds it to a repo, and from then on every step is a mise task, named for what it does
+(`cloudflare:deploy`), in the order the docs give. Each one says what it did and what to run next, and `mise run
+cloudflare` shows where the repo is at any time. The logins are wrangler's and cf's own, made once per machine when you
+click **Allow**; GitHub never holds a Cloudflare credential. Every version is pinned, and one task, `mise run
+cloudflare:update`, moves them all, by [mise-check](https://github.com/joeblew999/mise-check), whose job pins are. CI
+checks it on macOS, Linux and Windows, and it sets itself up in a Claude Code cloud session.
 
 ## Use it in your repo
 
@@ -75,11 +75,11 @@ wrangler does the work for every kind of binding; mise-cloudflare adds only what
 
 | Step | For every kind, by wrangler | Kind by kind, by mise-cloudflare |
 |---|---|---|
-| `04-check` | wrangler's own validation of the config: its warnings are problems | |
-| Every step that runs the Worker | | The package's own `build` script first, when it has one (`npm run build`, with its lockfile's package manager): `06-serve`, `08-deploy`, `11-preview` and Workers Builds. wrangler then runs what it wrote: Cloudflare's Vite plugin writes the config it deploys, as such a repo's own `deploy` script (`npm run build && wrangler deploy`) does |
-| `06-serve` | `wrangler dev`. What wrangler simulates runs locally; what it runs on Cloudflare even locally (its own pick: Workers AI, an AI Search namespace, a binding marked `remote`, …) runs on the repo's login, which it makes first, and needs its resource there | |
-| `08-deploy` | `wrangler deploy`, which makes what a binding uses when the config names nothing, of the kinds it can: KV, D1, R2, Queues, Flagship apps, Dispatch Namespaces | |
-| `13-delete` | `wrangler delete`, which deletes the Worker's own Durable Objects with it, all their data too, and leaves what deploy made | It says which Durable Objects go when it asks, and checks they went. It deletes what deploy made and named after the Worker: KV, D1, R2, Queues, Flagship apps. What the config names is yours and stays (an AI Search or Agent Memory namespace always is). It names every binding it leaves |
+| `cloudflare:check` | wrangler's own validation of the config: its warnings are problems | |
+| Every step that runs the Worker | | The package's own `build` script first, when it has one (`npm run build`, with its lockfile's package manager): `cloudflare:serve`, `cloudflare:deploy`, `cloudflare:preview` and Workers Builds. wrangler then runs what it wrote: Cloudflare's Vite plugin writes the config it deploys, as such a repo's own `deploy` script (`npm run build && wrangler deploy`) does |
+| `cloudflare:serve` | `wrangler dev`. What wrangler simulates runs locally; what it runs on Cloudflare even locally (its own pick: Workers AI, an AI Search namespace, a binding marked `remote`, …) runs on the repo's login, which it makes first, and needs its resource there | |
+| `cloudflare:deploy` | `wrangler deploy`, which makes what a binding uses when the config names nothing, of the kinds it can: KV, D1, R2, Queues, Flagship apps, Dispatch Namespaces | |
+| `cloudflare:delete` | `wrangler delete`, which deletes the Worker's own Durable Objects with it, all their data too, and leaves what deploy made | It says which Durable Objects go when it asks, and checks they went. It deletes what deploy made and named after the Worker: KV, D1, R2, Queues, Flagship apps. What the config names is yours and stays (an AI Search or Agent Memory namespace always is). It names every binding it leaves |
 | Previews | `wrangler preview` | Their own of what deploy makes: KV, D1, R2, Queues and Flagship apps, in the Worker's Previews Base |
 | Environments | The one `CLOUDFLARE_ENV` names (wrangler's own pick), or the top level | One login for the repo, named after the top level's Worker, whichever environment deploys |
 
@@ -96,8 +96,8 @@ What's proven and where:
 - **Not yet run:** Workers Builds deploying a named environment (#20); a Dispatch Namespace, which needs Workers for
   Platforms (#23). The open work is the repo's [issues](https://github.com/joeblew999/mise-cloudflare/issues).
 
-The repo's login is a wrangler auth profile, which older wranglers (4.49.0) don't have: on one, `06-serve` still runs
-its local bindings, and `04-check` says to move it (`mise run cloudflare:update` moves every pin).
+The repo's login is a wrangler auth profile, which older wranglers (4.49.0) don't have: on one, `cloudflare:serve` still runs
+its local bindings, and `cloudflare:check` says to move it (`mise run cloudflare:update` moves every pin).
 
 ## Working on mise-cloudflare
 
@@ -136,7 +136,7 @@ run the furthest you need, here, never waiting on GitHub. In this checkout the t
 
 ### Tasks
 
-Every task is named noun:verb, what it acts on and then what it does, as a repo's own are (`cloudflare:08-deploy`).
+Every task is named noun:verb, what it acts on and then what it does, as a repo's own are (`cloudflare:deploy`).
 `mise tasks` lists each with what it does.
 
 | Task | What | When | Cloudflare |
@@ -149,7 +149,7 @@ Every task is named noun:verb, what it acts on and then what it does, as a repo'
 | `template:update` | The template's pins at their newest, by its own `cloudflare:update` (mise-check's update): each moved one before → after | To move its pins; then the walks | No |
 | `new-repo:e2e-serve` | The walk on a new repo, as far as `serve` (`--version` pins a release) | After every change | No |
 | `new-repo:e2e-deploy` | The walk on a new repo, as far as `deploy` | After a change to how it deploys | Yes |
-| `new-repo:e2e-extras` | `new-repo:e2e-deploy` with the extras | After a change to `13-delete`, `06-serve` or previews | Yes |
+| `new-repo:e2e-extras` | `new-repo:e2e-deploy` with the extras | After a change to `cloudflare:delete`, `cloudflare:serve` or previews | Yes |
 | `new-repo:e2e-env` | `new-repo:e2e-deploy` in a wrangler environment, `env.staging`, on the repo's one login | After a change to environments or the login | Yes |
 | `repos:check [owner/repo]` | The corpus: every wrangler config in third-party repos, read and checked | After a change to how the tool reads a config or what `check` asks of a repo | No |
 | `repos:e2e-adopt <path>` | The walk on one of the corpus's Workers, adopted as its owner would (below), as far as `deploy` | After a change to how the tool works on a repo it didn't make | Yes |
@@ -167,18 +167,18 @@ requires its packages at): `mise run mise-check` says what's done and what to ru
 
 ### Tests
 
-**The walk.** A repo's steps are its own numbered tasks, `cloudflare:03-init` to `cloudflare:15-clean`
-([templates/.mise/tasks/mise-cloudflare.toml](templates/.mise/tasks/mise-cloudflare.toml)), after steps 00 to 02 (the
-repo's git, `mise install`, its own `setup`). One name all the way through: `cloudflare:08-deploy` runs
-`mise-cloudflare deploy`, which is `main.go`'s `case "deploy"` calling `r.deploy` in `deploy.go`. The walk tests (`TestWalkTemplate`, `TestWalkNewRepo`, …, one a kind of repo) walk
-them in their order, through the repo's own mise file, as a person takes them, each step with its check, as far as a
-stage:
+**The walk.** A repo's steps are its own tasks, `cloudflare:init` to `cloudflare:clean`
+([templates/.mise/tasks/mise-cloudflare.toml](templates/.mise/tasks/mise-cloudflare.toml)), after the repo's git, `mise
+install` and its own `setup`; their order is the walk's (`steps`, in e2e_steps_test.go) and the docs'. One name all the
+way through: `cloudflare:deploy` runs `mise-cloudflare deploy`, which is `main.go`'s `case "deploy"` calling `r.deploy`
+in `deploy.go`. The walk tests (`TestWalkTemplate`, `TestWalkNewRepo`, …, one a kind of repo) walk them in their order,
+through the repo's own mise file, as a person takes them, each step with its check, as far as a stage:
 
 | Stage | As far as | Needs |
 |---|---|---|
-| `serve` | `06-serve`: the Worker locally, with local D1, KV and R2; on the way, `04-check`'s rules and what the repo's GitHub workflow runs (`cloudflare:verify`) | Nothing |
-| `deploy` | `08-deploy` on the repo's own login, the live D1, KV, R2 and secret, stray tokens refused; `11-preview`, the preview's own; then `13-delete` | A Cloudflare account; the first time, an Allow |
-| `connect-github` | `09-connect-github`: Workers Builds builds production from a throwaway branch and a preview for a pull request's branch, gone with its branch | GitHub too |
+| `serve` | `cloudflare:serve`: the Worker locally, with local D1, KV and R2; on the way, `cloudflare:check`'s rules and what the repo's GitHub workflow runs (`cloudflare:verify`) | Nothing |
+| `deploy` | `cloudflare:deploy` on the repo's own login, the live D1, KV, R2 and secret, stray tokens refused; `cloudflare:preview`, the preview's own; then `cloudflare:delete` | A Cloudflare account; the first time, an Allow |
+| `connect-github` | `cloudflare:connect-github`: Workers Builds builds production from a throwaway branch and a preview for a pull request's branch, gone with its branch | GitHub too |
 
 It walks five kinds of repo:
 
@@ -190,10 +190,10 @@ It walks five kinds of repo:
   tries it, and pins itself in `.mise/config.toml`. Not `connect-github`: it has no GitHub.
 - **A new repo with extras**: the same, whose developer first adds bindings beyond the template's
   ([e2e_bindings_test.go](e2e_bindings_test.go), one row a kind: a Queue, a Flagship app and Workers AI; it says why
-  other kinds aren't rows). wrangler deploy must make each one and `13-delete` delete it, checked through Cloudflare's
-  API, and `11-preview` make the previews' own and bind it in the preview. Workers AI runs on Cloudflare even locally:
-  with no login, in CI, `06-serve` must stop before `wrangler dev` and say it needs the repo's login, and after
-  `08-deploy` run on it.
+  other kinds aren't rows). wrangler deploy must make each one and `cloudflare:delete` delete it, checked through Cloudflare's
+  API, and `cloudflare:preview` make the previews' own and bind it in the preview. Workers AI runs on Cloudflare even locally:
+  with no login, in CI, `cloudflare:serve` must stop before `wrangler dev` and say it needs the repo's login, and after
+  `cloudflare:deploy` run on it.
 - **A new repo in a wrangler environment** (`new-repo:e2e-env`): the same, whose developer adds `env.staging` (its own
   D1, KV, R2 and secret, which wrangler doesn't inherit); every step runs with `CLOUDFLARE_ENV=staging`. Its Worker,
   `mise-cloudflare-new-staging`, deploys on the repo's one login, named after the top level's Worker, which is never
@@ -259,6 +259,6 @@ then only runs the root mise, as on any machine:
   `mise-check:verify`, its rules on this repo's pins and mise files.
 
 The walks that deploy run here, not in CI: before merging a change to how it deploys, `template:e2e-deploy`; to
-`13-delete` or `06-serve`, `new-repo:e2e-extras`; to `connect-github`, `template:e2e-connect-github`.
+`cloudflare:delete` or `cloudflare:serve`, `new-repo:e2e-extras`; to `connect-github`, `template:e2e-connect-github`.
 
 This README is the one place for all of it, for people and agents alike: CLAUDE.md only loads it (`@README.md`).

@@ -1,6 +1,7 @@
 # This repo's Cloudflare Worker. Start with: mise run cloudflare (what's done, and what to run next).
-# One task per command, numbered in the order a repo meets them: mise run cloudflare:<nn>-<command> runs
-# mise-cloudflare <command>. Steps 00 to 02 come before these tasks: the repo's git, mise install, its own setup.
+# One task per command: mise run cloudflare:<command> runs mise-cloudflare <command>. The steps are below in the order
+# a repo takes them (docs/mise-cloudflare/README.md, and mise run cloudflare says which is next), after its git, mise
+# install and its own setup.
 # Each passes its usage values with mise's own templates ({{usage.<name>}}), never shell syntax, so it runs the same
 # under sh, cmd and PowerShell.
 # Written by mise-cloudflare (github.com/joeblew999/mise-cloudflare): don't edit it. .mise/config.toml pins its version.
@@ -11,67 +12,67 @@ tools = { "npm:cf" = "1.0.0-beta.26", gh = "2.103.0" }
 usage = 'flag "--json" help="one JSON document on stdout, instead of text"'
 run = 'mise-cloudflare{% if usage.json %} --json{% endif %}'
 
-["cloudflare:03-init"]
-description = "03. mise-cloudflare's files written into the repo again, after upgrading it (the first time, before these tasks: mise exec github:joeblew999/mise-cloudflare@latest -- mise-cloudflare init)"
+["cloudflare:init"]
+description = "mise-cloudflare's files written into the repo again, after upgrading it (the first time, before these tasks: mise exec github:joeblew999/mise-cloudflare@latest -- mise-cloudflare init)"
 run = "mise-cloudflare init"
 
-["cloudflare:04-check"]
-description = "04. The repo's rules: no tokens or account IDs in it, secrets git-ignored, init's files current"
+["cloudflare:check"]
+description = "The repo's rules: no tokens or account IDs in it, secrets git-ignored, init's files current"
 usage = 'flag "--json" help="one JSON document on stdout, instead of text"'
 run = 'mise-cloudflare check{% if usage.json %} --json{% endif %}'
 
-["cloudflare:05-show"]
-description = "05. What's done for this Worker, and what to run next"
+["cloudflare:show"]
+description = "What's done for this Worker, and what to run next"
 tools = { "npm:cf" = "1.0.0-beta.26", gh = "2.103.0" }
 usage = 'flag "--json" help="one JSON document on stdout, instead of text"'
 run = 'mise-cloudflare show{% if usage.json %} --json{% endif %}'
 
-["cloudflare:06-serve"]
-description = "06. The Worker locally, with local D1, KV and R2: no Cloudflare account needed, but for a binding wrangler runs on Cloudflare even here (then it logs the repo in)"
+["cloudflare:serve"]
+description = "The Worker locally, with local D1, KV and R2: no Cloudflare account needed, but for a binding wrangler runs on Cloudflare even here (then it logs the repo in)"
 usage = 'arg "[args]..." help="passed on to wrangler dev as they are: --ip 127.0.0.1 --port 8787"'
 run = 'mise-cloudflare serve{% for a in usage.args %} "{{a}}"{% endfor %}'
 
-["cloudflare:07-set-secrets"]
-description = "07. The secrets the Worker requires that Cloudflare doesn't have yet: it asks for each"
+["cloudflare:set-secrets"]
+description = "The secrets the Worker requires that Cloudflare doesn't have yet: it asks for each"
 run = "mise-cloudflare set-secrets"
 
-["cloudflare:08-deploy"]
-description = "08. The Worker on Cloudflare, on the repo's own login: the first time, you click Allow"
+["cloudflare:deploy"]
+description = "The Worker on Cloudflare, on the repo's own login: the first time, you click Allow"
 usage = 'arg "[args]..." help="passed on to wrangler deploy as they are"'
 run = 'mise-cloudflare deploy{% for a in usage.args %} "{{a}}"{% endfor %}'
 
-["cloudflare:09-connect-github"]
-description = "09. Cloudflare deploys every push: a preview for every pull request, then production (--staging main for staging, --off to stop)"
+["cloudflare:connect-github"]
+description = "Cloudflare deploys every push: a preview for every pull request, then production (--staging main for staging, --off to stop)"
 tools = { "npm:cf" = "1.0.0-beta.26", gh = "2.103.0" }
 usage = 'flag "--off" help="turn it off: the Workers Builds setup and the previews resources deleted"; flag "--branch <branch>" help="the branch whose pushes deploy production (default the default branch of the repository, or production with --staging)"; flag "--staging <branch>" help="a staging branch, whose pushes deploy the wrangler environment env.staging"; flag "--build <command>" help="the build command (default installing from the lockfile: npm ci, …)"; flag "--json" help="one JSON document on stdout, instead of text"'
 run = 'mise-cloudflare connect-github{% if usage.off %} --off{% endif %}{% if usage.branch %} --branch "{{usage.branch}}"{% endif %}{% if usage.staging %} --staging "{{usage.staging}}"{% endif %}{% if usage.build %} --build {% if os() == "windows" %}"{{usage.build}}"{% else %}{{usage.build | quote}}{% endif %}{% endif %}{% if usage.json %} --json{% endif %}'
 
-["cloudflare:10-set-preview-secrets"]
-description = "10. The secrets the Worker's previews require, which they don't inherit, in its Previews Base: it asks for each"
+["cloudflare:set-preview-secrets"]
+description = "The secrets the Worker's previews require, which they don't inherit, in its Previews Base: it asks for each"
 run = "mise-cloudflare set-preview-secrets"
 
-["cloudflare:11-preview"]
-description = "11. A preview of what's here now, at its own URL, with its own KV, D1, R2, Queues and Flagship apps (--name my-test)"
+["cloudflare:preview"]
+description = "A preview of what's here now, at its own URL, with its own KV, D1, R2, Queues and Flagship apps (--name my-test)"
 usage = 'arg "[args]..." help="passed on to wrangler preview as they are: --name my-test"'
 run = 'mise-cloudflare preview{% for a in usage.args %} "{{a}}"{% endfor %}'
 
-["cloudflare:12-login"]
-description = "12. The repo's Cloudflare login (the others make it when they need it)"
+["cloudflare:login"]
+description = "The repo's Cloudflare login (the others make it when they need it)"
 usage = 'flag "--json" help="one JSON document on stdout, instead of text"'
 run = 'mise-cloudflare login{% if usage.json %} --json{% endif %}'
 
-["cloudflare:13-delete"]
-description = "13. Deploy undone: the Worker deleted, then its own KV, D1, R2, Queues and Flagship apps and its previews' own (it asks first; --yes doesn't)"
+["cloudflare:delete"]
+description = "Deploy undone: the Worker deleted, then its own KV, D1, R2, Queues and Flagship apps and its previews' own (it asks first; --yes doesn't)"
 usage = 'flag "--yes" help="do not ask first"'
 run = 'mise-cloudflare delete{% if usage.yes %} --yes{% endif %}'
 
-["cloudflare:14-logout"]
-description = "14. The repo's Cloudflare logins logged out and deleted: wrangler's, and cf's for Workers Builds"
+["cloudflare:logout"]
+description = "The repo's Cloudflare logins logged out and deleted: wrangler's, and cf's for Workers Builds"
 tools = { "npm:cf" = "1.0.0-beta.26" }
 run = "mise-cloudflare logout"
 
-["cloudflare:15-clean"]
-description = "15. The local state undone, as 13-delete undoes Cloudflare's: .wrangler/ (the local D1, KV and R2, and what deploys wrote) and .dev.vars, so the next 06-serve starts from nothing (it asks first; --yes doesn't)"
+["cloudflare:clean"]
+description = "The local state undone, as cloudflare:delete undoes Cloudflare's: .wrangler/ (the local D1, KV and R2, and what deploys wrote) and .dev.vars, so the next cloudflare:serve starts from nothing (it asks first; --yes doesn't)"
 usage = 'flag "--yes" help="do not ask first"'
 run = 'mise-cloudflare clean{% if usage.yes %} --yes{% endif %}'
 
@@ -80,7 +81,7 @@ description = "What the repo's GitHub workflow runs: its own setup and test task
 run = "mise-cloudflare verify"
 
 ["cloudflare:update"]
-description = "The repo's own pins at their newest releases, by mise-check (github.com/joeblew999/mise-check), whose job pins are: its mise tools, its packages (with aube, whichever lockfile it has) and its Go and Go modules, majors too, mise-cloudflare's pin among them (at local it stays; moved, 03-init writes its files again). What changed is in git: the steps prove it. --no-major takes no majors"
+description = "The repo's own pins at their newest releases, by mise-check (github.com/joeblew999/mise-check), whose job pins are: its mise tools, its packages (with aube, whichever lockfile it has) and its Go and Go modules, majors too, mise-cloudflare's pin among them (at local it stays; moved, cloudflare:init writes its files again). What changed is in git: the steps prove it. --no-major takes no majors"
 usage = 'flag "--no-major" help="no major moves: packages within their ranges, Go modules within their major"; flag "--json" help="one JSON document on stdout, every pin before and after, instead of text"'
 run = 'mise-check update{% if usage.no_major %} --no-major{% endif %}{% if usage.json %} --json{% endif %}'
 

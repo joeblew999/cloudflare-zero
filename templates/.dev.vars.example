@@ -1,2 +1,2 @@
-# Every name in wrangler.jsonc secrets.required, with a dummy value for local dev. mise run cloudflare:06-serve copies it to .dev.vars.
+# Every name in wrangler.jsonc secrets.required, with a dummy value for local dev. mise run cloudflare:serve copies it to .dev.vars.
 GREETING=hello-from-local-dev

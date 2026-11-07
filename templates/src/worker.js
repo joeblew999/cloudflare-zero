@@ -1,5 +1,5 @@
 // One request touches every binding, so a test can see D1, KV, R2 and the secret all working. It deletes the R2
-// object it wrote, so nothing is left in a bucket and mise run cloudflare:13-delete deletes the buckets too.
+// object it wrote, so nothing is left in a bucket and mise run cloudflare:delete deletes the buckets too.
 export default {
   async fetch(_request, env) {
     const stamp = new Date().toISOString();

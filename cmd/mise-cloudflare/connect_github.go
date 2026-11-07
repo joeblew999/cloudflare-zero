@@ -51,7 +51,7 @@ type builds struct{ Branch, Staging, Build string }
 // removes it all.
 func (r repo) connectGithub(ctx context.Context, b builds, off, jsonOut bool) {
 	if !cf.Installed() {
-		fail(errors.New("cf, which connects Workers Builds, doesn't run here: run mise run cloudflare:09-connect-github, which brings it"))
+		fail(errors.New("cf, which connects Workers Builds, doesn't run here: run mise run cloudflare:connect-github, which brings it"))
 	}
 	r.refuseStrayTokens()
 	// The GitHub repository first: without one there's nothing for Workers Builds to build, so no login is asked for.
@@ -251,7 +251,7 @@ func workerTag(ctx context.Context, c cf.CF, name, env string) string {
 	if tag := findWorker(ctx, c, name); tag != "" {
 		return tag
 	}
-	deploy := "mise run cloudflare:08-deploy"
+	deploy := "mise run cloudflare:deploy"
 	if env != "" {
 		deploy += " -- --env " + env
 	}

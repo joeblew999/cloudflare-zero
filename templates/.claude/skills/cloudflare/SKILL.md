@@ -14,23 +14,23 @@ Start with `mise run cloudflare`: it shows the steps, which are done, and what t
 ## The steps, in the order a repo takes them
 
 Before them: the repo's git, `mise install`, and its own `mise run setup`. Each task runs the mise-cloudflare command
-of its name (`mise run cloudflare:08-deploy` runs `mise-cloudflare deploy`).
+of its name (`mise run cloudflare:deploy` runs `mise-cloudflare deploy`).
 
 | Task | Run it | What it does |
 |---|---|---|
-| `mise run cloudflare:03-init` | after upgrading mise-cloudflare | writes mise-cloudflare's files again: its tasks, the workflow, this skill, the docs, the hook |
-| `mise run cloudflare:04-check` | after any change, before deploying | the repo's rules: no tokens or account IDs in it, secrets git-ignored, init's files current |
-| `mise run cloudflare:05-show` | to see where the Worker is | what's done, and what to run next (the same as `mise run cloudflare`) |
-| `mise run cloudflare:06-serve` | to run the Worker locally | `wrangler dev` with local D1, KV and R2: no account needed (a binding wrangler runs on Cloudflare even here logs the repo in) |
-| `mise run cloudflare:07-set-secrets` | before the first deploy, and for a new secret | asks for each secret the Worker requires that Cloudflare doesn't have yet |
-| `mise run cloudflare:08-deploy` | to put the Worker on Cloudflare | `wrangler deploy` on the repo's own login; the first time, the person clicks Allow |
-| `mise run cloudflare:09-connect-github` | once, so Cloudflare deploys every push | Workers Builds: a preview for every pull request, production from the default branch |
-| `mise run cloudflare:10-set-preview-secrets` | before the first preview (`11-preview`, or a pull request's after connect-github) | asks for each secret previews need, in the Previews Base: previews don't inherit the Worker's |
-| `mise run cloudflare:11-preview` | to try what's here at its own URL | `wrangler preview`, with its own KV, D1, R2, Queues and Flagship apps |
-| `mise run cloudflare:12-login` | only when asked to log in first | the repo's Cloudflare login; the other tasks make it when they need it |
-| `mise run cloudflare:13-delete` | to undo deploy | the Worker deleted, then its own KV, D1, R2, Queues, Flagship apps and its previews' own; it asks first |
-| `mise run cloudflare:14-logout` | to end the repo's logins | wrangler's and cf's logins for the repo, logged out and deleted |
-| `mise run cloudflare:15-clean` | to start local runs from nothing | `.wrangler/` (local D1, KV, R2) and `.dev.vars` deleted; it asks first |
+| `mise run cloudflare:init` | after upgrading mise-cloudflare | writes mise-cloudflare's files again: its tasks, the workflow, this skill, the docs, the hook |
+| `mise run cloudflare:check` | after any change, before deploying | the repo's rules: no tokens or account IDs in it, secrets git-ignored, init's files current |
+| `mise run cloudflare:show` | to see where the Worker is | what's done, and what to run next (the same as `mise run cloudflare`) |
+| `mise run cloudflare:serve` | to run the Worker locally | `wrangler dev` with local D1, KV and R2: no account needed (a binding wrangler runs on Cloudflare even here logs the repo in) |
+| `mise run cloudflare:set-secrets` | before the first deploy, and for a new secret | asks for each secret the Worker requires that Cloudflare doesn't have yet |
+| `mise run cloudflare:deploy` | to put the Worker on Cloudflare | `wrangler deploy` on the repo's own login; the first time, the person clicks Allow |
+| `mise run cloudflare:connect-github` | once, so Cloudflare deploys every push | Workers Builds: a preview for every pull request, production from the default branch |
+| `mise run cloudflare:set-preview-secrets` | before the first preview (`cloudflare:preview`, or a pull request's after connect-github) | asks for each secret previews need, in the Previews Base: previews don't inherit the Worker's |
+| `mise run cloudflare:preview` | to try what's here at its own URL | `wrangler preview`, with its own KV, D1, R2, Queues and Flagship apps |
+| `mise run cloudflare:login` | only when asked to log in first | the repo's Cloudflare login; the other tasks make it when they need it |
+| `mise run cloudflare:delete` | to undo deploy | the Worker deleted, then its own KV, D1, R2, Queues, Flagship apps and its previews' own; it asks first |
+| `mise run cloudflare:logout` | to end the repo's logins | wrangler's and cf's logins for the repo, logged out and deleted |
+| `mise run cloudflare:clean` | to start local runs from nothing | `.wrangler/` (local D1, KV, R2) and `.dev.vars` deleted; it asks first |
 
 ## The other tasks
 
@@ -46,22 +46,22 @@ of its name (`mise run cloudflare:08-deploy` runs `mise-cloudflare deploy`).
 
 ## Flags and arguments
 
-- `--json`: one JSON document on stdout instead of text, on `mise run cloudflare`, `04-check`, `05-show`,
-  `09-connect-github` and `12-login`, and on `update` every pin before and after. Read that, never the text.
-- `--yes`: on `13-delete` and `15-clean`, don't ask first. Pass it only when the person has said to delete.
-- `--off`: on `09-connect-github`, turn Workers Builds off: its setup and the previews' resources deleted.
-- `--branch <branch>`: on `09-connect-github`, the branch whose pushes deploy production (default the repository's
+- `--json`: one JSON document on stdout instead of text, on `mise run cloudflare`, `cloudflare:check`, `cloudflare:show`,
+  `cloudflare:connect-github` and `cloudflare:login`, and on `cloudflare:update` every pin before and after. Read that, never the text.
+- `--yes`: on `cloudflare:delete` and `cloudflare:clean`, don't ask first. Pass it only when the person has said to delete.
+- `--off`: on `cloudflare:connect-github`, turn Workers Builds off: its setup and the previews' resources deleted.
+- `--branch <branch>`: on `cloudflare:connect-github`, the branch whose pushes deploy production (default the repository's
   default branch, or `production` with `--staging`).
-- `--staging <branch>`: on `09-connect-github`, a branch whose pushes deploy the wrangler environment `env.staging`
+- `--staging <branch>`: on `cloudflare:connect-github`, a branch whose pushes deploy the wrangler environment `env.staging`
   (`--staging main`).
-- `--build <command>`: on `09-connect-github`, the build command (default installing from the lockfile).
-- `--no-major`: on `update`, no major moves.
-- Arguments after `06-serve`, `08-deploy`, `11-preview` and `run-wrangler` go to wrangler as they are:
-  `mise run cloudflare:06-serve --port 8787`, `mise run cloudflare:11-preview --name my-test`.
+- `--build <command>`: on `cloudflare:connect-github`, the build command (default installing from the lockfile).
+- `--no-major`: on `cloudflare:update`, no major moves.
+- Arguments after `cloudflare:serve`, `cloudflare:deploy`, `cloudflare:preview` and `cloudflare:run-wrangler` go to wrangler as they are:
+  `mise run cloudflare:serve --port 8787`, `mise run cloudflare:preview --name my-test`.
 
 A deploy, a preview or a login needs the person once, to click Allow. With `CLOUDFLARE_LOGIN=device`, or in a Claude
 Code cloud session, the task prints a link with the code in it: give the person that link as the first line of a
-message, so they open it on any device. CI never deploys: Workers Builds does, after `09-connect-github`.
+message, so they open it on any device. CI never deploys: Workers Builds does, after `cloudflare:connect-github`.
 
 ## Never
 
@@ -70,7 +70,7 @@ message, so they open it on any device. CI never deploys: Workers Builds does, a
 - Never create, ask for or store a Cloudflare API token.
 - Never click Allow for the person, and never pass `--yes` without their say.
 - Never upgrade a pin by hand: `mise run cloudflare:update`.
-- Never edit what `mise run cloudflare:03-init` writes: `.mise/tasks/mise-cloudflare.toml`, `docs/mise-cloudflare/`,
+- Never edit what `mise run cloudflare:init` writes: `.mise/tasks/mise-cloudflare.toml`, `docs/mise-cloudflare/`,
   this skill, `.github/workflows/cloudflare.yml` and the Claude Code hook. After upgrading mise-cloudflare, run
-  `mise run cloudflare:03-init`, which writes them again.
-- Never weaken a rule `mise run cloudflare:04-check` reports: fix the repo.
+  `mise run cloudflare:init`, which writes them again.
+- Never weaken a rule `mise run cloudflare:check` reports: fix the repo.

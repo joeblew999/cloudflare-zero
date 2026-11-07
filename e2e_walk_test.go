@@ -1,11 +1,11 @@
-// Package e2e is this repo's end-to-end test: a walk of a repo's numbered tasks, through the repo's own mise file, on
+// Package e2e is this repo's end-to-end test: a walk of a repo's step tasks, through the repo's own mise file, on
 // mise-check's walk (github.com/joeblew999/mise-check/walk), which runs the steps in their order and does everything
 // that isn't Cloudflare's. It sits at the top of this repo, beside the root mise.toml whose tasks run it, in a file for
 // each thing it does:
 //
 //   - e2e_walk_test.go, this file: the walk tests the root's tasks run by name (which repo is the test's name; how
 //     far, its flag -stage), and the stages.
-//   - e2e_steps_test.go: the steps, the repo's numbered tasks in their order, each with its check.
+//   - e2e_steps_test.go: the steps, the repo's step tasks in their order, each with its check.
 //   - e2e_mise_test.go: the repo, and what's Cloudflare's in making one: a new repo (mise-cloudflare init, then
 //     cloudflare:template), an adopted third-party Worker, a checkout of HEAD, and the calls the steps make.
 //   - e2e_cloudflare_test.go: what the walk looks at besides, as a person does: the Worker's URL, the account's D1, KV
@@ -25,7 +25,7 @@ import (
 	"github.com/joeblew999/mise-check/walk"
 )
 
-// cloudflareWalk is the walk: the template's numbered tasks (templates/.mise/tasks/mise-cloudflare.toml), in their
+// cloudflareWalk is the walk: the template's step tasks (templates/.mise/tasks/mise-cloudflare.toml), in their
 // order, each checked, as far as -stage. Which repo is the test's name: the template where it is, a new repo made the
 // README's way (at the release -version names or this checkout's build), or a third-party Worker adopted as its owner
 // would (-adopt).
@@ -72,9 +72,9 @@ var (
 	walkEnv    string
 )
 
-// logoutFlag, the test's flag -logout, has 14-logout log out: without it the login is kept, so the next walk needs
+// logoutFlag, the test's flag -logout, has cloudflare:logout log out: without it the login is kept, so the next walk needs
 // no Allow.
-var logoutFlag = flag.Bool("logout", false, "log out at 14-logout (default keep the login, so the next walk needs no Allow)")
+var logoutFlag = flag.Bool("logout", false, "log out at cloudflare:logout (default keep the login, so the next walk needs no Allow)")
 
 // TestSteps checks that the steps are the template's numbered tasks, in their order, so the walk is that file's walk.
 func TestSteps(t *testing.T) {
@@ -89,9 +89,9 @@ var adoptFlag = flag.String("adopt", "", "a third-party Worker's folder in repos
 type stage int
 
 const (
-	serve         stage = iota // as far as 06-serve: the Worker locally, needing nothing, CI included
-	deploy                     // as far as 08-deploy: deployed from here, needing a Cloudflare account (and an Allow, the first time)
-	connectGithub              // as far as 09-connect-github: Cloudflare deploying every push, needing the repo on GitHub too
+	serve         stage = iota // as far as cloudflare:serve: the Worker locally, needing nothing, CI included
+	deploy                     // as far as cloudflare:deploy: deployed from here, needing a Cloudflare account (and an Allow, the first time)
+	connectGithub              // as far as cloudflare:connect-github: Cloudflare deploying every push, needing the repo on GitHub too
 )
 
 // stageNames are the stages as -stage names them: after the step each goes as far as.
@@ -135,8 +135,8 @@ type walker struct {
 	repo
 	upTo       stage
 	before     walk.Files // the repo's files before the steps that deploy, which must change none of them
-	url        string     // the Worker's, once 08-deploy has deployed it
-	preview    string     // its preview's, once 11-preview has made it
+	url        string     // the Worker's, once cloudflare:deploy has deployed it
+	preview    string     // its preview's, once cloudflare:preview has made it
 	prod, prev string     // the throwaway branches connect-github's steps push
 }
 

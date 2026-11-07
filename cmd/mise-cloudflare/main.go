@@ -21,24 +21,24 @@ import (
 	"github.com/joeblew999/mise-cloudflare/internal/wrangler"
 )
 
-const help = `This repo's Cloudflare Worker, with mise-cloudflare. Each command is a task, numbered in the order a repo
-meets them: mise run cloudflare:<nn>-<command> runs mise-cloudflare <command>.
+const help = `This repo's Cloudflare Worker, with mise-cloudflare. Each command is a task: mise run cloudflare:<command>
+runs mise-cloudflare <command>.
 
-The steps, in order (mise run cloudflare says which is next):
-  mise run cloudflare:03-init                  mise-cloudflare's files written into the repo (again, after upgrading)
-  mise run cloudflare:04-check                 the repo's rules: no tokens or account IDs in it, secrets git-ignored, files current
-  mise run cloudflare:05-show                  what's done, and what to run next (mise run cloudflare, too)
-  mise run cloudflare:06-serve                 the Worker locally, with local D1, KV and R2: no account needed
-  mise run cloudflare:07-set-secrets           the secrets the Worker requires that Cloudflare doesn't have yet
-  mise run cloudflare:08-deploy                the Worker on Cloudflare, on the repo's login: the first time, you click Allow
-  mise run cloudflare:09-connect-github        Cloudflare deploys every push: a preview for every pull request, then
-                                               production (--staging main for staging; --off to stop)
-  mise run cloudflare:10-set-preview-secrets   the secrets its previews require, which they don't inherit
-  mise run cloudflare:11-preview               a preview of what's here now, at its own URL (--name my-test)
-  mise run cloudflare:12-login                 the repo's Cloudflare login (the others make it when they need it)
-  mise run cloudflare:13-delete                deploy undone: the Worker and what deploy made, its previews' own (--yes: don't ask)
-  mise run cloudflare:14-logout                the repo's logins logged out and deleted
-  mise run cloudflare:15-clean                 the local state undone: .wrangler/ and .dev.vars (--yes: don't ask)
+The steps, in the order a repo takes them (mise run cloudflare says which is next):
+  mise run cloudflare:init                  mise-cloudflare's files written into the repo (again, after upgrading)
+  mise run cloudflare:check                 the repo's rules: no tokens or account IDs in it, secrets git-ignored, files current
+  mise run cloudflare:show                  what's done, and what to run next (mise run cloudflare, too)
+  mise run cloudflare:serve                 the Worker locally, with local D1, KV and R2: no account needed
+  mise run cloudflare:set-secrets           the secrets the Worker requires that Cloudflare doesn't have yet
+  mise run cloudflare:deploy                the Worker on Cloudflare, on the repo's login: the first time, you click Allow
+  mise run cloudflare:connect-github        Cloudflare deploys every push: a preview for every pull request, then
+                                            production (--staging main for staging; --off to stop)
+  mise run cloudflare:set-preview-secrets   the secrets its previews require, which they don't inherit
+  mise run cloudflare:preview               a preview of what's here now, at its own URL (--name my-test)
+  mise run cloudflare:login                 the repo's Cloudflare login (the others make it when they need it)
+  mise run cloudflare:delete                deploy undone: the Worker and what deploy made, its previews' own (--yes: don't ask)
+  mise run cloudflare:logout                the repo's logins logged out and deleted
+  mise run cloudflare:clean                 the local state undone: .wrangler/ and .dev.vars (--yes: don't ask)
 
 And:
   mise run cloudflare:verify         what the repo's GitHub workflow runs: its setup and test tasks, then check
@@ -99,7 +99,7 @@ func main() {
 	}
 	// CI only checks the repo; Cloudflare's Workers Builds deploys. No one is there to click Allow.
 	if inCI() && command != "" && command != "show" && command != "check" && command != "verify" && command != "serve" && command != "clean" {
-		fail(errors.New("in CI there's no one to log in: CI runs mise run cloudflare:verify, and Cloudflare's Workers Builds deploys (mise run cloudflare:09-connect-github)"))
+		fail(errors.New("in CI there's no one to log in: CI runs mise run cloudflare:verify, and Cloudflare's Workers Builds deploys (mise run cloudflare:connect-github)"))
 	}
 	r := openRepo(ctx, dir)
 	switch command {

@@ -45,7 +45,7 @@ func configTool() miseconfig.Tool {
 	if version != "" {
 		release = buildVersion()
 	}
-	return miseconfig.Tool{Name: self, Release: release, Template: templateConfig, Init: "mise run cloudflare:03-init"}
+	return miseconfig.Tool{Name: self, Release: release, Template: templateConfig, Init: "mise run cloudflare:init"}
 }
 
 // initRepo writes the template's tool half into the repo, each file at its path there.
@@ -157,13 +157,13 @@ func (r repo) stale(ctx context.Context) []string {
 		// Line endings aside: a Windows checkout of the repo may have \r\n where init wrote \n.
 		crlf := func(b []byte) []byte { return bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n")) }
 		if b, err := os.ReadFile(filepath.Join(r.dir, filepath.FromSlash(p))); err == nil && !bytes.Equal(crlf(b), crlf(want)) {
-			out = append(out, p+" is out of date: run mise run cloudflare:03-init")
+			out = append(out, p+" is out of date: run mise run cloudflare:init")
 		}
 		return nil
 	})
 	if b, err := os.ReadFile(filepath.Join(r.dir, ".mise", "config.toml")); err == nil {
 		if !miseCheckLine.Match(b) {
-			out = append(out, ".mise/config.toml doesn't pin "+miseCheck+", which cloudflare:update runs: run mise run cloudflare:03-init, which adds it")
+			out = append(out, ".mise/config.toml doesn't pin "+miseCheck+", which cloudflare:update runs: run mise run cloudflare:init, which adds it")
 		}
 		out = append(out, configTool().Problems(b)...)
 	}

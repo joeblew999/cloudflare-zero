@@ -178,7 +178,7 @@ func (r repo) adoptedCopy() repo {
 		if !n.miseShowJSON().Profiles {
 			r.T.Fatal("cloudflare:update didn't move its wrangler to one with auth profiles")
 		}
-		n.Pass("its wrangler had no auth profiles, as 04-check says: moved as the tool says (mise use aube, cloudflare:update)")
+		n.Pass("its wrangler had no auth profiles, as cloudflare:check says: moved as the tool says (mise use aube, cloudflare:update)")
 	}
 	return n
 }
@@ -211,7 +211,7 @@ func (r repo) miseWranglerStdout(args ...string) string {
 	return string(out)
 }
 
-// shown is what the repo's cloudflare:05-show shows, as JSON (--json).
+// shown is what the repo's cloudflare:show shows, as JSON (--json).
 type shown struct {
 	Profile  string   `json:"profile"`
 	LoggedIn bool     `json:"loggedIn"`
@@ -223,11 +223,11 @@ type shown struct {
 	Next     string   `json:"next"`
 }
 
-// miseShowJSON is the repo's cloudflare:05-show --json, its output unprefixed (and only its stdout read) so its JSON reads
+// miseShowJSON is the repo's cloudflare:show --json, its output unprefixed (and only its stdout read) so its JSON reads
 // as JSON.
 func (r repo) miseShowJSON() shown {
 	r.T.Helper()
-	cmd := exec.Command("mise", "run", "cloudflare:05-show", "--json")
+	cmd := exec.Command("mise", "run", "cloudflare:show", "--json")
 	cmd.Dir = r.Dir
 	cmd.Env = append(os.Environ(), "MISE_CEILING_PATHS="+filepath.Dir(r.Dir), "MISE_TRUSTED_CONFIG_PATHS="+r.Dir, "MISE_TASK_OUTPUT=interleave")
 	cmd.Stderr = os.Stderr
@@ -237,24 +237,24 @@ func (r repo) miseShowJSON() shown {
 		err = json.NewDecoder(strings.NewReader(jsonPart(string(out)))).Decode(&s)
 	}
 	if err != nil {
-		r.T.Fatalf("cloudflare:05-show --json: %v\n%s", err, out)
+		r.T.Fatalf("cloudflare:show --json: %v\n%s", err, out)
 	}
 	return s
 }
 
-// miseShowSaysNext fails unless cloudflare:05-show says to run want next.
+// miseShowSaysNext fails unless cloudflare:show says to run want next.
 func (r repo) miseShowSaysNext(want string) {
 	r.T.Helper()
 	if s := r.miseShowJSON(); !strings.Contains(s.Next, want) {
-		r.T.Fatalf("cloudflare:05-show says next: %q, not %q", s.Next, want)
+		r.T.Fatalf("cloudflare:show says next: %q, not %q", s.Next, want)
 	}
-	r.Pass("cloudflare:05-show says next: %s", want)
+	r.Pass("cloudflare:show says next: %s", want)
 }
 
-// miseServeLocally runs the Worker as a person does, with the repo's cloudflare:06-serve (which makes .dev.vars from
+// miseServeLocally runs the Worker as a person does, with the repo's cloudflare:serve (which makes .dev.vars from
 // .dev.vars.example): with no Cloudflare login anywhere it could see unless onLogin (a home of its own, with mise's own
 // folders kept, its config among them, so this machine's tools are still there: a repo of someone else's often pins
-// no node of its own). It returns the Worker's answer, or, when 06-serve stopped without one,
+// no node of its own). It returns the Worker's answer, or, when cloudflare:serve stopped without one,
 // what it printed.
 func (r repo) miseServeLocally(onLogin bool) (answer []byte, stopped string) {
 	r.T.Helper()
@@ -270,7 +270,7 @@ func (r repo) miseServeLocally(onLogin bool) (answer []byte, stopped string) {
 	if out, err := exec.Command("mise", "doctor", "--json").Output(); err != nil || json.Unmarshal(out, &doctor) != nil {
 		r.T.Fatalf("mise doctor --json: %v", err)
 	}
-	cmd := exec.Command("mise", "run", "cloudflare:06-serve", "--ip", "127.0.0.1", "--port", port)
+	cmd := exec.Command("mise", "run", "cloudflare:serve", "--ip", "127.0.0.1", "--port", port)
 	cmd.Dir = r.Dir
 	cmd.Env = append(os.Environ(), "MISE_CEILING_PATHS="+filepath.Dir(r.Dir), "MISE_YES=1", "MISE_TRUSTED_CONFIG_PATHS="+r.Dir,
 		"CLOUDFLARE_API_TOKEN=", "CI=1")
@@ -301,20 +301,20 @@ func (r repo) miseServeLocally(onLogin bool) (answer []byte, stopped string) {
 		}
 		time.Sleep(time.Second)
 	}
-	r.T.Fatalf("cloudflare:06-serve never answered:\n%s", logs.String())
+	r.T.Fatalf("cloudflare:serve never answered:\n%s", logs.String())
 	return nil, ""
 }
 
 // miseDeleteEverythingOnCloudflare deletes everything of the repo's Worker on Cloudflare, with the repo's own tasks, so a
 // walk that deploys starts from nothing whatever a stopped one left: Workers Builds' setup for it
-// (cloudflare:09-connect-github --off, when cf has a login for it; without one there's none), connect-github's
+// (cloudflare:connect-github --off, when cf has a login for it; without one there's none), connect-github's
 // throwaway e2e-* branches on this repo's GitHub, and the Worker with its D1, KV and R2 and its previews'
-// (cloudflare:13-delete). Then nothing of it may be on the account.
+// (cloudflare:delete). Then nothing of it may be on the account.
 func (r repo) miseDeleteEverythingOnCloudflare() {
 	r.T.Helper()
 	r.Heading("Nothing of %s on Cloudflare: what a stopped walk left, deleted", r.worker)
 	if out, _ := r.Run(nil, "cf", "auth", "whoami", "--profile", r.login); strings.Contains(out, `"authenticated": true`) {
-		r.MustTask("cloudflare:09-connect-github", "--off")
+		r.MustTask("cloudflare:connect-github", "--off")
 	}
 	heads, err := walk.Exec(r.Top, os.Environ(), "", "git", "ls-remote", "--heads", "origin")
 	if err != nil {
@@ -329,6 +329,6 @@ func (r repo) miseDeleteEverythingOnCloudflare() {
 			r.Pass("deleted the branch %s", b)
 		}
 	}
-	r.MustTask("cloudflare:13-delete", "--yes")
+	r.MustTask("cloudflare:delete", "--yes")
 	r.nothingOnCloudflare()
 }

@@ -8,6 +8,6 @@
   "kv_namespaces": [{ "binding": "KV" }],
   "r2_buckets": [{ "binding": "BUCKET" }],
   "secrets": { "required": ["GREETING"] },
-  // Previews (mise run cloudflare:09-connect-github, cloudflare:11-preview) need this block; their KV, D1 and R2 they get of their own.
+  // Previews (mise run cloudflare:connect-github, cloudflare:preview) need this block; their KV, D1 and R2 they get of their own.
   "previews": {}
 }

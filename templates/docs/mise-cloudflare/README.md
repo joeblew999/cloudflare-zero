@@ -5,7 +5,7 @@ locally, deploy it, then a preview for every pull request, staging and productio
 Claude Code. No API tokens to make; the first time, you click **Allow**.
 
 Written by `mise-cloudflare init`, for the version this repo's `.mise/config.toml` pins: don't edit it. After upgrading,
-`mise run cloudflare:03-init` writes it again, and `mise run cloudflare:04-check` fails until it has.
+`mise run cloudflare:init` writes it again, and `mise run cloudflare:check` fails until it has.
 
 ## Set up and upgrade
 
@@ -48,10 +48,10 @@ GitHub, here and on GitHub's machines alike. There's nothing to edit, then or ev
 `.gitignore` or `.claude/settings.json` the repo has already it leaves as it is, and `check` names what they lack (the
 hook's entry). The repo's wrangler config is the repo's, read by its own wrangler: nothing here changes it, refuses what
 it names, or deletes a resource it names. The steps that write a file holding secrets git-ignore it first (`serve` its
-`.dev.vars`, made from a `.dev.vars.example` if there is one; `09` cf's `.cloudflare/`), and wrangler itself names a
+`.dev.vars`, made from a `.dev.vars.example` if there is one; `cloudflare:connect-github` cf's `.cloudflare/`), and wrangler itself names a
 required secret it has no value for.
 
-To upgrade: `mise run cloudflare:update` moves the pin (with every other), then `mise run cloudflare:03-init` writes
+To upgrade: `mise run cloudflare:update` moves the pin (with every other), then `mise run cloudflare:init` writes
 `init`'s files again; or name the release: `mise use --path .mise/config.toml github:joeblew999/mise-cloudflare@<version>`.
 mise holds back a tool's release for a day after it's published (its minimum release age), but `.mise/config.toml`
 takes mise-cloudflare at its newest release the minute it's out (in `minimum_release_age_excludes`, where each tool's
@@ -68,36 +68,36 @@ mise run cloudflare
 ```
 my-worker
   compatibility date 2026-10-01
-  ✓ 06. Run it locally     mise run cloudflare:06-serve
-  ✓ 08. Deploy it          mise run cloudflare:08-deploy   https://my-worker.example.workers.dev
-  · 09. Deploy every push  mise run cloudflare:09-connect-github   a preview for every pull request, then staging and production
+  ✓ Run it locally     mise run cloudflare:serve
+  ✓ Deploy it          mise run cloudflare:deploy   https://my-worker.example.workers.dev
+  · Deploy every push  mise run cloudflare:connect-github   a preview for every pull request, then staging and production
   login: my-worker, on My Account
-next: mise run cloudflare:09-connect-github
+next: mise run cloudflare:connect-github
 ```
 
 | Step | Run | You're asked |
 |---|---|---|
-| 06. Run it locally, with local D1, KV and R2 | `mise run cloudflare:06-serve` | Nothing: no account needed, unless a binding runs on Cloudflare even here (wrangler's table marks it remote: Workers AI, an AI Search namespace, …). That one needs the repo's login, which it makes first when there's none, as `08-deploy` does (in CI it stops: no one is there to click Allow), and its resource on Cloudflare: `08-deploy` makes the ones wrangler makes (an AI Search namespace, …) |
-| 08. Deploy it yourself | `mise run cloudflare:08-deploy` | **Allow**, the first time |
-| 09. Have Cloudflare deploy every push, once | `mise run cloudflare:09-connect-github` | **Allow** for Cloudflare's own CLI, the first time |
+| Run it locally, with local D1, KV and R2 | `mise run cloudflare:serve` | Nothing: no account needed, unless a binding runs on Cloudflare even here (wrangler's table marks it remote: Workers AI, an AI Search namespace, …). That one needs the repo's login, which it makes first when there's none, as `cloudflare:deploy` does (in CI it stops: no one is there to click Allow), and its resource on Cloudflare: `cloudflare:deploy` makes the ones wrangler makes (an AI Search namespace, …) |
+| Deploy it yourself | `mise run cloudflare:deploy` | **Allow**, the first time |
+| Have Cloudflare deploy every push, once | `mise run cloudflare:connect-github` | **Allow** for Cloudflare's own CLI, the first time |
 
-After step 09 there's nothing to run: push a branch and open a pull request, and Cloudflare builds a preview and puts
+After `cloudflare:connect-github` there's nothing to run: push a branch and open a pull request, and Cloudflare builds a preview and puts
 its link on the pull request; merge it, and Cloudflare deploys production. For staging too,
-`mise run cloudflare:09-connect-github --staging main`: then merging into `main` deploys staging, and merging `main` into
+`mise run cloudflare:connect-github --staging main`: then merging into `main` deploys staging, and merging `main` into
 `production` deploys production.
 
 ## Your Worker's bindings
 
-wrangler does the work for every kind: `06-serve` runs `wrangler dev`, and `08-deploy` runs `wrangler deploy`, which
+wrangler does the work for every kind: `cloudflare:serve` runs `wrangler dev`, and `cloudflare:deploy` runs `wrangler deploy`, which
 makes what a binding uses when the config names nothing. A binding wrangler runs on Cloudflare even locally (Workers AI,
-an AI Search namespace, one marked `remote`, …) needs the repo's login, which `06-serve` makes first, and its resource
-there. `13-delete` deletes what deploy made (KV, D1, R2, Queues, Flagship apps), never what the config names, and names
+an AI Search namespace, one marked `remote`, …) needs the repo's login, which `cloudflare:serve` makes first, and its resource
+there. `cloudflare:delete` deletes what deploy made (KV, D1, R2, Queues, Flagship apps), never what the config names, and names
 every binding it leaves, and deletes the Worker's own Durable Objects with it, all their data too. Previews get their
-own KV, D1, R2, Queues and Flagship apps. When `package.json` has a `build` script, `06-serve`, `08-deploy`,
-`11-preview` and Cloudflare's builds run it first, with your lockfile's package manager (`npm run build`), and wrangler
+own KV, D1, R2, Queues and Flagship apps. When `package.json` has a `build` script, `cloudflare:serve`, `cloudflare:deploy`,
+`cloudflare:preview` and Cloudflare's builds run it first, with your lockfile's package manager (`npm run build`), and wrangler
 runs what it wrote: Cloudflare's Vite plugin writes the config wrangler deploys. A Python Worker, which deploys with
 pywrangler, isn't handled yet. A wrangler environment is the one `CLOUDFLARE_ENV` names (`CLOUDFLARE_ENV=staging mise
-run cloudflare:08-deploy`), on the repo's one login, named after the Worker at the config's top level. What's proven,
+run cloudflare:deploy`), on the repo's one login, named after the Worker at the config's top level. What's proven,
 kind by kind:
 [mise-cloudflare's README](https://github.com/joeblew999/mise-cloudflare#what-it-does-with-your-workers-bindings).
 
@@ -105,24 +105,28 @@ kind by kind:
 
 One name all the way through: each command is a task, `mise run cloudflare:<command>`, which runs
 `mise-cloudflare <command>`. `mise run cloudflare` alone is `show`, and `mise run cloudflare:show-help` lists them all.
+The steps, in the order a repo takes them (`mise run cloudflare` says which is next): `cloudflare:init`,
+`cloudflare:check`, `cloudflare:show`, `cloudflare:serve`, `cloudflare:set-secrets`, `cloudflare:deploy`,
+`cloudflare:connect-github`, `cloudflare:set-preview-secrets`, `cloudflare:preview` and `cloudflare:login`; then, to undo
+them, `cloudflare:delete`, `cloudflare:logout` and `cloudflare:clean`.
 
 | Task | Does | Asks you |
 |---|---|---|
-| `cloudflare:05-show` | Where the Worker is, step by step, and what to run next; `--json` for a program | Nothing |
-| `cloudflare:04-check` | The repo's rules (below), and whether init's files are current | Nothing |
+| `cloudflare:show` | Where the Worker is, step by step, and what to run next; `--json` for a program | Nothing |
+| `cloudflare:check` | The repo's rules (below), and whether init's files are current | Nothing |
 | `cloudflare:verify` | What the repo's GitHub workflow runs: its own `setup` task, or with none its lockfile's install (`npm ci`, `pnpm install --frozen-lockfile`, …) when wrangler isn't installed yet, then its `test` task if it has one, then `check`. The same on your machine as on GitHub | Nothing |
-| `cloudflare:07-set-secrets` | The secrets the Worker requires (`secrets.required`) that Cloudflare doesn't have yet: it asks for each, unseen; `--previews` sets the ones the Worker's Previews Base lacks, which previews don't inherit | Each value |
-| `cloudflare:06-serve` | `wrangler dev`: the Worker locally, with local D1, KV and R2 and `.dev.vars` | Nothing |
-| `cloudflare:08-deploy` | `wrangler deploy` on the repo's login (wrangler's flags follow: `--env staging`) | Allow, the first time |
-| `cloudflare:09-connect-github` | Cloudflare deploys every push (Workers Builds): production from the repository's default branch, a preview for every other; `--staging main` for staging; `--branch`, `--build` to change those; `--off` to stop. Run again with no flags, it keeps what's set | Allow for cf, the first time |
-| `cloudflare:11-preview` | A preview of what's here now (`wrangler preview`: `--name my-test`), with its own KV, D1, R2, Queues and Flagship apps | Allow, the first time |
+| `cloudflare:set-secrets` | The secrets the Worker requires (`secrets.required`) that Cloudflare doesn't have yet: it asks for each, unseen; `--previews` sets the ones the Worker's Previews Base lacks, which previews don't inherit | Each value |
+| `cloudflare:serve` | `wrangler dev`: the Worker locally, with local D1, KV and R2 and `.dev.vars` | Nothing |
+| `cloudflare:deploy` | `wrangler deploy` on the repo's login (wrangler's flags follow: `--env staging`) | Allow, the first time |
+| `cloudflare:connect-github` | Cloudflare deploys every push (Workers Builds): production from the repository's default branch, a preview for every other; `--staging main` for staging; `--branch`, `--build` to change those; `--off` to stop. Run again with no flags, it keeps what's set | Allow for cf, the first time |
+| `cloudflare:preview` | A preview of what's here now (`wrangler preview`: `--name my-test`), with its own KV, D1, R2, Queues and Flagship apps | Allow, the first time |
 | `cloudflare:run-wrangler <...>` | Any wrangler command on the repo's login: `wrangler d1 list`, `secret put`, `tail`, … | Allow, the first time |
-| `cloudflare:13-delete` | Deploy undone: the Worker deleted, and with it its own Durable Objects and all their data (wrangler deletes them; it names them when it asks, and checks they went), then the KV, D1, R2, Queues and Flagship apps deploy made for it (a binding that names none) and its previews' own. One the config names is yours: it stays (an AI Search or Agent Memory namespace always is: wrangler requires its name). An R2 bucket that still holds objects stays: it never deletes what's in one. Every other binding it names as left as it is. One it can't delete it marks ✗, with Cloudflare's own words, and it then fails, naming what's still there. It asks first; `--yes` doesn't | The Worker's name, to be sure |
-| `cloudflare:12-login` / `cloudflare:14-logout` | The repo's login (the others make it when they need it); logout deletes it, and cf's | Allow, to log in |
-| `cloudflare:15-clean` | The local state undone, as `13-delete` undoes Cloudflare's: `.wrangler/` (the local D1, KV and R2, and what deploys wrote) and `.dev.vars`, so the next `06-serve` starts from nothing. It asks first; `--yes` doesn't | y, to be sure |
+| `cloudflare:delete` | Deploy undone: the Worker deleted, and with it its own Durable Objects and all their data (wrangler deletes them; it names them when it asks, and checks they went), then the KV, D1, R2, Queues and Flagship apps deploy made for it (a binding that names none) and its previews' own. One the config names is yours: it stays (an AI Search or Agent Memory namespace always is: wrangler requires its name). An R2 bucket that still holds objects stays: it never deletes what's in one. Every other binding it names as left as it is. One it can't delete it marks ✗, with Cloudflare's own words, and it then fails, naming what's still there. It asks first; `--yes` doesn't | The Worker's name, to be sure |
+| `cloudflare:login` / `cloudflare:logout` | The repo's login (the others make it when they need it); logout deletes it, and cf's | Allow, to log in |
+| `cloudflare:clean` | The local state undone, as `cloudflare:delete` undoes Cloudflare's: `.wrangler/` (the local D1, KV and R2, and what deploys wrote) and `.dev.vars`, so the next `cloudflare:serve` starts from nothing. It asks first; `--yes` doesn't | y, to be sure |
 | `cloudflare:template` | The template's own Worker, in a repo with none yet, named for the repo's folder, with the `mise.toml` that installs its wrangler. It never writes over a file | Nothing |
-| `cloudflare:update` | The repo's own pins at their newest releases, nothing outside it, by [mise-check](https://github.com/joeblew999/mise-check) (`mise-check update`, pinned beside mise-cloudflare in `.mise/config.toml`): its mise tools, its packages (aube, whichever lockfile the repo has) and its Go and Go modules, majors too, then `03-init` if mise-cloudflare moved (at `local` it stays). A release younger than 7 days is skipped, but the owner's own modules move at once. `--no-major` takes no majors; `--json` gives every pin before and after. What changed is in git: the steps prove it | Nothing |
-| `cloudflare:03-init` | After upgrading mise-cloudflare: init's files written again. The first time, before there are tasks: `mise exec github:joeblew999/mise-cloudflare@latest -- mise-cloudflare init` | Nothing |
+| `cloudflare:update` | The repo's own pins at their newest releases, nothing outside it, by [mise-check](https://github.com/joeblew999/mise-check) (`mise-check update`, pinned beside mise-cloudflare in `.mise/config.toml`): its mise tools, its packages (aube, whichever lockfile the repo has) and its Go and Go modules, majors too, then `cloudflare:init` if mise-cloudflare moved (at `local` it stays). A release younger than 7 days is skipped, but the owner's own modules move at once. `--no-major` takes no majors; `--json` gives every pin before and after. What changed is in git: the steps prove it | Nothing |
+| `cloudflare:init` | After upgrading mise-cloudflare: init's files written again. The first time, before there are tasks: `mise exec github:joeblew999/mise-cloudflare@latest -- mise-cloudflare init` | Nothing |
 | `cloudflare:show-version` | This build's version | Nothing |
 | `cloudflare:show-help` | Every command | Nothing |
 
@@ -149,7 +153,7 @@ file: each choice is a command's flag, kept by Cloudflare's Workers Builds setup
 | No Cloudflare token in its files, and nothing calling `wrangler login` | A token in the repo leaks; `wrangler login` is the machine's, not the repo's |
 | No `.dev.vars`, `.env` or `.cloudflare/` that git would commit | They hold local secrets, and the account cf logged into; the steps that write them git-ignore them first |
 | wrangler pinned: exactly in `package.json`, or by the lockfile committed with it (a workspace's above it counts) | So everyone, CI and Cloudflare's builds run the same wrangler |
-| A `previews` block before `09`, its KV, D1 or R2 naming the resource they use (or left out: they get their own, below) | Worker Previews need one, and Cloudflare refuses a preview's KV, D1 or R2 that names none; wrangler preview itself names the bindings a preview lacks |
+| A `previews` block before `cloudflare:connect-github`, its KV, D1 or R2 naming the resource they use (or left out: they get their own, below) | Worker Previews need one, and Cloudflare refuses a preview's KV, D1 or R2 that names none; wrangler preview itself names the bindings a preview lacks |
 
 ## Logins and tokens
 
@@ -202,12 +206,12 @@ login; the task brings cf.
 
 ### The previews' own KV, D1, R2, Queues and Flagship apps
 
-Cloudflare makes previews none of what `08-deploy` makes (only Durable Objects and Containers), and `wrangler preview`
+Cloudflare makes previews none of what `cloudflare:deploy` makes (only Durable Objects and Containers), and `wrangler preview`
 creates none. So `connect-github` and `preview` make `<worker>-previews-<binding>` for each KV, D1, R2, Queue and
 Flagship binding the previews block leaves out, once, and put them in the Worker's Previews Base on Cloudflare, the
 settings every new preview starts from. Nothing goes into the repo. All previews share them; production's and
 staging's stay theirs. After adding one of those bindings, `mise run cloudflare` says to run `connect-github` again,
-which gives previews the new one. `connect-github --off` and `13-delete` delete them (an R2 bucket only once it's
+which gives previews the new one. `connect-github --off` and `cloudflare:delete` delete them (an R2 bucket only once it's
 empty).
 
 ## CI
@@ -225,9 +229,9 @@ there to click Allow, and Cloudflare's Workers Builds deploys.
 | `refusing: .env sets a Cloudflare token or key` | Remove that line from the file, or name it so wrangler doesn't read it |
 | `wrangler isn't installed here` | Install the repo's dependencies: `package.json` pins wrangler |
 | `npm warn install-scripts` (npm 11) | npm holds back packages' install scripts until you approve them (`npm install-scripts ls`); wrangler ran without its own (workerd's, esbuild's), dev and deploy both |
-| `the repo's wrangler, … has no auth profiles` | An older wrangler (4.49.0 is one) can't hold the repo's login: move it to a newer one, `mise run cloudflare:update` (it moves every pin; `mise use aube` first if it says so). `06-serve` still runs local bindings on it |
-| `… still don't match the repo's` | The person approved other permissions or another account: `mise run cloudflare:14-logout`, then log in again |
-| A `mise run cloudflare:04-check` problem | Fix the repo; never weaken the rule |
+| `the repo's wrangler, … has no auth profiles` | An older wrangler (4.49.0 is one) can't hold the repo's login: move it to a newer one, `mise run cloudflare:update` (it moves every pin; `mise use aube` first if it says so). `cloudflare:serve` still runs local bindings on it |
+| `… still don't match the repo's` | The person approved other permissions or another account: `mise run cloudflare:logout`, then log in again |
+| A `mise run cloudflare:check` problem | Fix the repo; never weaken the rule |
 
 ## Claude Code
 
