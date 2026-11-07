@@ -258,7 +258,19 @@ func TestInit(t *testing.T) {
 	if b, _ := os.ReadFile(config); !bytes.Contains(b, []byte(`= "0.0.1"`)) {
 		t.Errorf("init wrote over the repo's own pin:\n%s", b)
 	}
+	// It adds to the repo's own what it lacks: mise-check's pin, the owner's tools (to its own list), use_versions_host.
+	os.WriteFile(config, []byte("[settings]\nminimum_release_age_excludes = [\"npm:x\"]\n\n[tools]\n\""+self+"\" = \"0.0.1\"\n"), 0o644)
+	initRepo(dir)
+	b, _ := os.ReadFile(config)
+	if got := (repo{dir: dir}).stale(context.Background()); len(got) > 0 || !bytes.Contains(b, []byte(`["npm:x", "`+excludes[0]+`"`)) {
+		t.Errorf("init didn't add what the repo's own .mise/config.toml lacks: %q\n%s", got, b)
+	}
+	if initRepo(dir); !bytes.Equal(b, must2(os.ReadFile(config))) {
+		t.Errorf("init again changed .mise/config.toml")
+	}
 }
+
+func must2(b []byte, _ error) []byte { return b }
 
 // TestOlder: releases compare by number, part by part (0.1.7 is older than 0.1.36), never as text.
 func TestOlder(t *testing.T) {

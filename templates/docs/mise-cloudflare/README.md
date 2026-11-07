@@ -53,8 +53,9 @@ required secret it has no value for.
 
 To upgrade: `mise run cloudflare:update` moves the pin (with every other), then `mise run cloudflare:03-init` writes
 `init`'s files again; or name the release: `mise use --path .mise/config.toml github:joeblew999/mise-cloudflare@<version>`.
-mise holds back a release for a while after it's published (its minimum release age), so name the version to get one
-at once.
+mise holds back every other tool's release for a day after it's published (its minimum release age), but
+`.mise/config.toml` takes mise-cloudflare, mise-check and mise-intl at their newest release the minute it's out
+(`minimum_release_age_excludes`, and `use_versions_host = false`, so `latest` is GitHub's own newest).
 
 ## Use it
 
@@ -130,7 +131,7 @@ One name all the way through: each command is a task, `mise run cloudflare:<comm
 | File | What |
 |---|---|
 | `.mise/tasks/mise-cloudflare.toml` | The tasks, `mise run cloudflare` and `cloudflare:<command>` (mise finds them there by itself) |
-| `.mise/config.toml` | mise-cloudflare's pin, at the release that ran `init`, and mise-check's, which `cloudflare:update` runs: written once, then the repo's (`cloudflare:update` moves them; `init` adds mise-check's to one without it) |
+| `.mise/config.toml` | mise-cloudflare's pin, at the release that ran `init`, and mise-check's, which `cloudflare:update` runs: written once, then the repo's (`cloudflare:update` moves them; `init` adds mise-check's, and the settings that take the owner's tools at their newest release, to one without them) |
 | `docs/mise-cloudflare/README.md` | This page |
 | `.github/workflows/cloudflare.yml` | Checks the repo on every push and pull request |
 | `.claude/skills/cloudflare/SKILL.md` | The agent skill: how Claude works on the Worker |

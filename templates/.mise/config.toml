@@ -1,8 +1,15 @@
 # mise-cloudflare for this repo, from its GitHub releases: mise install gets it, and mise-check, which cloudflare:update
 # runs. mise-cloudflare init writes this file when the repo has none, pinning exactly the release that ran it (here in
-# the template it's latest), and adds mise-check's pin to one that has none; from then on the pins are the repo's (mise
-# run cloudflare:update moves them). A .mise/config.local.toml beside it, never committed,
+# the template it's latest), and adds mise-check's pin and the settings below to one that lacks them; from then on the
+# pins are the repo's (mise run cloudflare:update moves them). A .mise/config.local.toml beside it, never committed,
 # overrides it on one machine: mise-cloudflare's own checkout pins its build there (local).
+
+[settings]
+# mise-cloudflare, mise-check and mise-intl, never held back a day as every other tool's releases are
+# (minimum_release_age): latest is their newest release the minute it's out.
+minimum_release_age_excludes = ["github:joeblew999/mise-cloudflare", "github:joeblew999/mise-check", "github:joeblew999/mise-intl"]
+# latest from GitHub's own list of releases, not mise's versions host, which lists a release some time after it's out.
+use_versions_host = false
 
 [tools]
 "github:joeblew999/mise-cloudflare" = "latest"
