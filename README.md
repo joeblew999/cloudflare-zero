@@ -158,7 +158,12 @@ Every task is named noun:verb, what it acts on and then what it does, as a repo'
 | `tool:test` | `go vet`, the Go tests, the release config | After every change | No |
 | `tool:release` | A release from the commit checked out, as `release.yml` runs it; `--dry-run` tags and publishes nothing | Never by hand: a merge to main runs it | GitHub |
 | `root:check-mise` | `TestRootMise` on this repo's own `mise.toml`, its mise side: one line each, the Go it runs there, `usage` passed by name, no POSIX shell syntax, so every task runs on Windows too | After a change to this repo's tasks | No |
-| `root:update` | This repo's own pins (`mise.toml`'s tools, `go.mod`'s Go and modules) at their newest, by mise-check's update (`mise-check update`, pinned in `mise.toml`), as any repo's | To move its pins; then `tool:test` and the walks | No |
+
+This repo's pins, and the rules on its mise files, are [mise-check](https://github.com/joeblew999/mise-check)'s, through
+its own tasks, which `mise-check init` wrote into `.mise/` (`.mise/config.toml` pins it, at the release `go.mod`
+requires its packages at): `mise run mise-check` says what's done and what to run next, and every task is
+[docs/mise-check/README.md](docs/mise-check/README.md). Pins move only by `mise run mise-check:update`, then
+`tool:test` and the walks prove it.
 
 ### Tests
 
@@ -231,7 +236,8 @@ it isn't a binary's tasks.
 | [tool_test.go](tool_test.go) | this repo's | `TestToolRelease`, the release: only `mise run tool:release` runs it |
 | [repos.txt](repos.txt), `repos/` | this repo's | the corpus's repos, and their clones (git-ignored) |
 | [mise_test.go](mise_test.go) | this repo's | `TestRootMise` and `TestTemplateMise`: [mise-check's `misecheck`](https://github.com/joeblew999/mise-check) on a mise file of this repo and the Go it runs, both ways |
-| [.claude/](.claude/), [.github/workflows/](.github/workflows/) | this repo's | its own Claude Code hook and its own workflows; other repos get theirs from `templates/` |
+| [.mise/](.mise/), [docs/mise-check/](docs/mise-check/), [.claude/](.claude/), [.github/workflows/mise-check.yml](.github/workflows/mise-check.yml) | this repo's | mise-check's, as `mise-check init` writes them into any repo: its tasks and its pin, its docs, its Claude Code hook and skill, its workflow |
+| [.github/workflows/](.github/workflows/) | this repo's | its own workflows; other repos get theirs from `templates/` |
 
 ### CI and releases
 
@@ -249,6 +255,8 @@ then only runs the root mise, as on any machine:
 - [new-repo.yml](.github/workflows/new-repo.yml), once a release run has passed (or by hand, for any release): a new
   repo made the README's way at that release, walked as far as `serve`, on Linux, macOS and Windows, its tasks in each
   one's own shell (`cmd` on Windows). It runs after the release, so releases stay fast.
+- [mise-check.yml](.github/workflows/mise-check.yml), mise-check's, on every push and pull request:
+  `mise-check:verify`, its rules on this repo's pins and mise files.
 
 The walks that deploy run here, not in CI: before merging a change to how it deploys, `template:e2e-deploy`; to
 `13-delete` or `06-serve`, `new-repo:e2e-extras`; to `connect-github`, `template:e2e-connect-github`.
