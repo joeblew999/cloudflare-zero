@@ -248,9 +248,7 @@ func TestInit(t *testing.T) {
 	}
 	// .mise/config.toml pins the build that ran init (this test's, a checkout's: local), and is the repo's from then on.
 	config := filepath.Join(dir, ".mise", "config.toml")
-	want, _ := fs.ReadFile(templates.Tool, ".mise/config.toml")
-	want = pinLine.ReplaceAll(want, []byte(`"`+self+`" = "local"`))
-	if b, _ := os.ReadFile(config); !bytes.Equal(b, want) || !bytes.Contains(b, []byte(`"`+self+`" = "local"`)) {
+	if b, _ := os.ReadFile(config); !bytes.Equal(b, must2(configTool().Pinned())) || !bytes.Contains(b, []byte(`"`+self+`" = "local"`)) {
 		t.Errorf(".mise/config.toml doesn't pin this build, local:\n%s", b)
 	}
 	os.WriteFile(config, []byte("[tools]\n\"github:joeblew999/mise-cloudflare\" = \"0.0.1\"\n"), 0o644)
@@ -258,12 +256,22 @@ func TestInit(t *testing.T) {
 	if b, _ := os.ReadFile(config); !bytes.Contains(b, []byte(`= "0.0.1"`)) {
 		t.Errorf("init wrote over the repo's own pin:\n%s", b)
 	}
-	// It adds to the repo's own what it lacks: mise-check's pin, the owner's tools (to its own list), use_versions_host.
-	os.WriteFile(config, []byte("[settings]\nminimum_release_age_excludes = [\"npm:x\"]\n\n[tools]\n\""+self+"\" = \"0.0.1\"\n"), 0o644)
+	// A release's init brings its parts of another tool's file to what it writes (miseconfig): its pin moved forward,
+	// its own name beside the list's, use_versions_host, and mise-check's pin; the rest, the other's comment at the top
+	// among it, stays. Then there's nothing to write, or to report.
+	defer func(v string) { version = v }(version)
+	version = "v0.1.36"
+	own := "# mise-check for this repo\n\n[settings]\nminimum_release_age_excludes = [\"npm:x\"]\n\n[tools]\n\"" + self + "\" = \"0.1.7\"\n"
+	os.WriteFile(config, []byte(own), 0o644)
 	initRepo(dir)
 	b, _ := os.ReadFile(config)
-	if got := (repo{dir: dir}).stale(context.Background()); len(got) > 0 || !bytes.Contains(b, []byte(`["npm:x", "`+excludes[0]+`"`)) {
-		t.Errorf("init didn't add what the repo's own .mise/config.toml lacks: %q\n%s", got, b)
+	for _, part := range []string{"# mise-check for this repo\n", `["npm:x", "` + self + `"]`, "use_versions_host = false", `"` + self + `" = "0.1.36"`, `"` + miseCheck + `" = "latest"`} {
+		if !strings.Contains(string(b), part) {
+			t.Errorf("init didn't keep %q in the repo's own .mise/config.toml:\n%s", part, b)
+		}
+	}
+	if got := (repo{dir: dir}).stale(context.Background()); len(got) > 0 {
+		t.Errorf("stale after init: %q", got)
 	}
 	if initRepo(dir); !bytes.Equal(b, must2(os.ReadFile(config))) {
 		t.Errorf("init again changed .mise/config.toml")
@@ -280,24 +288,6 @@ func TestOlder(t *testing.T) {
 	}{{"0.1.7", "0.1.36", true}, {"0.1.36", "0.1.7", false}, {"0.1.36", "0.1.36", false}, {"0.9.0", "1.0.0", true}, {"local", "0.1.36", false}} {
 		if got := older(c.a, c.b); got != c.want {
 			t.Errorf("older(%s, %s) = %v, want %v", c.a, c.b, got, c.want)
-		}
-	}
-}
-
-// TestMovePin: a release's init moves an older release's pin forward to itself, and only that line; a newer pin, the
-// same one, local, or any pin under a checkout's build, stays.
-func TestMovePin(t *testing.T) {
-	defer func(v string) { version = v }(version)
-	path := filepath.Join(t.TempDir(), "config.toml")
-	for _, c := range []struct{ build, pin, want string }{
-		{"v0.1.36", "0.1.7", "0.1.36"}, {"v0.1.36", "0.1.40", "0.1.40"}, {"v0.1.36", "0.1.36", "0.1.36"}, {"v0.1.36", "local", "local"}, {"", "0.1.7", "0.1.7"},
-	} {
-		version = c.build
-		b := []byte("[tools]\n\"" + self + "\" = \"" + c.pin + "\"\nnode = \"26\"\n")
-		os.WriteFile(path, b, 0o644)
-		movePin(path, b)
-		if got, _ := os.ReadFile(path); string(got) != "[tools]\n\""+self+"\" = \""+c.want+"\"\nnode = \"26\"\n" {
-			t.Errorf("build %q, pin %s: %q, want the pin %s", c.build, c.pin, got, c.want)
 		}
 	}
 }
