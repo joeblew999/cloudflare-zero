@@ -4,13 +4,13 @@
 # one machine: mise-check's own checkout pins its build there (local).
 
 [settings]
-# The owner's tools, never held back a day as every other tool's releases are (minimum_release_age): latest is their
-# newest release, and mise-check:update, which clears their cached release lists first, moves them to it the minute
-# it's out. mise-check init adds this to a repo's own file.
+# The tools this repo takes the minute a release is out, never held back a day as every other tool's are
+# (minimum_release_age): latest is their newest release, and mise-check:update clears their cached release lists
+# first. Each tool's init adds its own name here, beside the others'.
 minimum_release_age_excludes = ["github:joeblew999/mise-check", "github:joeblew999/mise-intl", "github:joeblew999/mise-cloudflare"]
 # A latest from GitHub's own list of releases, not mise's versions host, which lists a release some time after it's
 # out: latest is the newest the minute it's there (an exact pin lists none). mise-check init adds this too.
 use_versions_host = false
 
 [tools]
-"github:joeblew999/mise-check" = "0.4.30"
+"github:joeblew999/mise-check" = "0.4.32"

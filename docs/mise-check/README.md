@@ -20,14 +20,22 @@ mise run setup                                                     # the package
 mise run mise-check                                                # what's done, and what to run next
 ```
 
-mise holds back a release younger than a day as `latest` (`minimum_release_age`), so `init` asks for none of that,
-for itself alone (`[minimum_release_age=0s]`, writing nothing anywhere else): it runs mise-check's newest release, or
-the one you name instead of `latest` (they're all on [its releases](https://github.com/joeblew999/mise-check/releases)).
-From then on the repo's own `.mise/config.toml` takes the owner's tools (mise-check, mise-intl, mise-cloudflare) at
-their newest release as `latest`, on every machine and in CI (`minimum_release_age_excludes`), from GitHub's own
-list of releases, not mise's versions host, which lists one some time after it's out (`use_versions_host = false`);
-`mise-check:check` says when it doesn't. It writes the repo's `.mise/` folder (its tasks, and mise-check pinned at exactly that release, which mise
-gets from GitHub), its GitHub workflow, its Claude Code hook and skill, this page and its `.gitignore`.
+`init` writes the repo's `.mise/` folder (its tasks, and mise-check pinned at exactly the release that ran it, which
+mise gets from GitHub), its GitHub workflow, its Claude Code hook and skill, this page and its `.gitignore`.
+
+`@latest` is mise-check's newest release as mise lists it; name one instead of `latest` for that one (they're all on
+[its releases](https://github.com/joeblew999/mise-check/releases)). mise holds back a release younger than a day
+(`minimum_release_age`), which `[minimum_release_age=0s]` lifts for this one command, writing nothing anywhere else.
+In the minutes after a release mise may not list it yet: its versions host lists one some time after it's out, and
+GitHub's API caches its answer a minute or more, which nothing in a repo can shorten. `init` then says so on its last
+line, with the one command for the newest, an exact release, which mise gets at once:
+`mise exec github:joeblew999/mise-check@<release> -- mise-check init`.
+
+From then on the repo's own `.mise/config.toml` takes mise-check at its newest release, on every machine and in CI:
+never held back a day (its name in `minimum_release_age_excludes`), and from GitHub's own list of releases, not the
+versions host (`use_versions_host = false`); `mise-check:check` says when it doesn't. Every tool whose init keeps its
+parts of the file with `miseconfig` (below) adds its own name to that list, beside the repo's entries and the other
+tools', so no list of tools is kept anywhere.
 
 No Go is needed first: `mise-check:template` writes the go.mod, and `mise install` brings the Go it names. A repo with
 code of its own skips `mise-check:template`, which never writes over a file anyway. Commit what `init` and `template`
@@ -48,9 +56,24 @@ mise run root:ci
 It runs mise-check's newest release, as `init` does in [A new repo](#a-new-repo). Without its GitHub repo, `new-tool` stops and says to make it.
 
 It copies mise-check at that release, everything git holds, from Go's module proxy, as `go get` has it; renames
-`mise-check` to `<name>` in every file's name and contents; and drops the two packages, `misecheck` and `walk`, which
-the new repo imports from mise-check instead, pinned at that release. Its README is a short one, saying what to do next. `root:ci` passes from
-the start. Then you remove what the new tool doesn't need, and misecheck names what's left of each command you remove.
+`mise-check` to `<name>` in every file's name and contents; and drops the three packages, `misecheck`, `walk` and
+`miseconfig`, which the new repo imports from mise-check instead, pinned at that release. Its README is a short one,
+saying what to do next. `root:ci` passes from the start. Then you remove what the new tool doesn't need, and misecheck
+names what's left of each command you remove.
+
+Its init is mise-check's, renamed: it keeps the new tool's parts of a repo's own `.mise/config.toml` with
+`miseconfig`, as any tool's init can:
+
+```go
+t := miseconfig.Tool{Name: "github:<owner>/<name>", Release: "0.1.0", Template: tmpl, Init: "mise run <name>:init"}
+b, err := t.Pinned()        // a repo with no .mise/config.toml: the template's, pinned at this release
+out, wrote := t.Keep(own)   // a repo's own: the tool's parts as this release writes them, what it wrote, the rest as it was
+problems := t.Problems(own) // what the tool's check reports of it, each naming t.Init
+```
+
+Its parts are the tool's pin (added, or moved forward to the release; `local` and `latest` stay), its own name in
+`minimum_release_age_excludes`, `use_versions_host = false`, and the comment at the file's top when the file is the
+tool's (it starts `# <name> `), each with its comment from the template's `.mise/config.toml` (`tmpl`).
 
 ## The tasks
 
@@ -85,15 +108,33 @@ any index; private repos need a token (`GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth l
 consistent with what pins it, as the updates leave them, then the repo's own `setup` and `test` tasks if it has them,
 then check.
 
+## Upgrading mise-check
+
+`mise run mise-check:update` moves mise-check with every other pin; then `mise run mise-check:init` writes its files
+as the new release does. A pin of `latest` runs the newest release installed on the machine: `mise install` keeps an
+older one there, and an update installs the newest.
+
+When the binary is too old to move itself (0.4.29 and older ask mise's versions host, which can say "All tools are up
+to date" with a release out), or `check` says the binary is behind go.mod's packages, one line sets the repo up at
+any release, whatever is installed:
+
+```sh
+mise exec github:joeblew999/mise-check@<release> -- mise-check init
+```
+
+It writes mise-check's files as that release does, moves an older pin to it (a pin of `latest` stays, and runs it),
+and adds what `.mise/config.toml` lacks of the template's settings.
+
 ## What the updates run
 
 `mise run mise-check:update` moves every pin the repo has of its own, each with its own tool (each step below is
 also a task of its own: `update-mise`, `update-packages`, `update-go`), and mise reads no
 parent folder's config, so nothing outside the repo moves:
 
-1. mise's tools, in the repo's mise files: `mise upgrade --bump --local`, after `mise cache clear` of the owner's
-   tools (mise-check, mise-intl, mise-cloudflare), whose releases it takes the minute they're out: mise keeps a tool's
-   list of releases an hour, and holds back every other tool's a day. A pin of `latest` stays `latest`.
+1. mise's tools, in the repo's mise files: `mise upgrade --bump --no-global`, after `mise cache clear` of the tools the
+   repo takes the minute they're out (the ones its `minimum_release_age_excludes` names, mise-check always among
+   them): mise keeps a tool's list of releases an hour, and holds back every other tool's a day. A pin of `latest`
+   stays `latest`.
 2. its packages, when it has a `package.json`: `aube update --latest`, which writes whichever lockfile the repo has
 3. in every `go.mod` of the repo (none in `vendor/`, `node_modules/`, `testdata/` or a dot folder):
    - its Go: `go get toolchain@latest`, the toolchain line. The `go` line, the least Go the module needs, stays.
@@ -150,8 +191,9 @@ run = 'go test . -run "^TestRootMise$" -count=1 -v'
 The packages are only the strict checks; the repo uses mise-check itself through mise, as any repo does: `mise-check
 init` at its top, and `go.mod` requiring the packages at the release `.mise/config.toml` pins. `Check` holds a repo to
 that in its own tests: without mise-check's tasks (`.mise/tasks/mise-check.toml`) it fails with the `mise exec
-github:joeblew999/mise-check@<release> -- mise-check init` line to run, and with the binary and the packages at two
-releases it says `mise run mise-check:update` moves both. A `go get` of the packages alone is the mistake it catches.
+github:joeblew999/mise-check@<release> -- mise-check init` line to run; with the binary behind the packages, the same
+line at the packages' release; with the packages behind, `mise run mise-check:update`, which moves both. A `go get`
+of the packages alone is the mistake it catches.
 
 ## The end-to-end tests: walk
 

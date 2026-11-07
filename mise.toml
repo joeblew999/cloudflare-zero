@@ -37,7 +37,7 @@ skills.fetch = false
 
 [tools]
 node = "26.13.0"   # runs cf, an npm package (a walked repo runs its wrangler on its own node)
-usage = { version = "7.2.0", workflow = "publish-cli.yml" }    # --help and tab-completion for the tasks' flags
+usage = { version = "7.3.0", workflow = "publish-cli.yml" }    # --help and tab-completion for the tasks' flags
 goreleaser = "2.20.0"   # the release's binaries (.goreleaser.yaml)
 "npm:cf" = "1.0.0-beta.26"   # Cloudflare's own CLI: the walk asks it about a repo's cf login and its Workers Builds builds
 
