@@ -1,13 +1,12 @@
-# mise-cloudflare's CI: every check that needs no Cloudflare account, on the template (templates) and on a copy
-# stamped out from it (made by the walk), on Linux, macOS and Windows side by side, so a problem on one shows before a
-# release (which never waits for CI). Cloudflare credentials never come here.
+# mise-cloudflare's CI: mise run root:ci, the same command as on any machine (root:verify: every check and walk that
+# needs no Cloudflare account), on Linux, macOS and Windows side by side, so a problem on one shows before a release
+# (which never waits for CI). Once a change: a push to main, and a pull request. Cloudflare credentials never come here.
 # Shell steps only, as go-htmx4's: no JavaScript actions.
 name: ci
 
 on:
   push:
-    branches-ignore: ["e2e-*"] # the walk's throwaway branches: they're there for Workers Builds, not for this CI
-    tags: ["**"]
+    branches: [main]
   pull_request:
 
 permissions:
@@ -19,7 +18,6 @@ concurrency:
 
 jobs:
   test:
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     strategy:
       fail-fast: false
       matrix:
@@ -58,18 +56,5 @@ jobs:
           mise --version
           mise install
 
-      - name: The tool's own tests (mise run tool:test, after template:setup, whose wrangler they read configs with), and the mise files and the Go lined up, the template's and this repo's (mise run template:check-mise, root:check-mise)
-        run: |
-          mise run template:setup
-          mise run tool:test
-          mise run template:check-mise
-          mise run root:check-mise
-
-      - name: Every wrangler config in the third-party repos of repos.txt, read and checked as the tasks do (mise run repos:check)
-        run: mise run repos:check
-
-      - name: The template, templates - the walk as far as the stage serve, which needs no account, what its own workflow runs included (mise run template:e2e-serve)
-        run: mise run template:e2e-serve
-
-      - name: A copy stamped out from it, as a person's repo is - the same walk, on it (mise run new-repo:e2e-serve)
-        run: mise run new-repo:e2e-serve
+      - name: Every check and walk that needs no Cloudflare account, as on any machine
+        run: mise run root:ci

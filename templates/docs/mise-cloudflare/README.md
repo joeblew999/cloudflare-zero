@@ -23,7 +23,9 @@ that's new or has a Worker of its own (a wrangler config, and wrangler in its `p
    It runs the newest release, or the one you name instead of `latest` (`@0.1.15`: they're all on
    [its releases](https://github.com/joeblew999/mise-cloudflare/releases)). It writes the repo's `.mise/` folder (its
    tasks, and mise-cloudflare pinned at exactly that release, which mise gets from GitHub), its GitHub workflow, its
-   Claude Code hook and skill, its docs and its `.gitignore`.
+   Claude Code hook and skill, its docs and its `.gitignore`. Then it runs
+   [mise-check](https://github.com/joeblew999/mise-check)'s own `init`, which gives the repo mise-check's tasks
+   (`mise run mise-check`, `mise-check:update`, …), its workflow, skill and docs: the repo's pins move by those.
 3. **The template's Worker, only in a repo with none yet:**
 
    ```sh
@@ -44,15 +46,15 @@ that's new or has a Worker of its own (a wrangler config, and wrangler in its `p
 Commit what steps 2 and 3 wrote.
 
 mise-cloudflare's pin, `.mise/config.toml`, is the release that ran `init`, so `mise install` gets that release from
-GitHub, here and on GitHub's machines alike. There's nothing to edit, then or ever. `init` writes only its own files: a
-`.gitignore` or `.claude/settings.json` the repo has already it leaves as it is, and `check` names what they lack (the
-hook's entry). The repo's wrangler config is the repo's, read by its own wrangler: nothing here changes it, refuses what
+GitHub, here and on GitHub's machines alike. There's nothing to edit, then or ever. `init` writes only its own files:
+of a `.mise/config.toml`, `.gitignore` or `.claude/settings.json` the repo has already, only its parts (its pin and
+settings, the template's lines, the hook's entry), the rest left as it is; `check` names what they lack. The repo's wrangler config is the repo's, read by its own wrangler: nothing here changes it, refuses what
 it names, or deletes a resource it names. The steps that write a file holding secrets git-ignore it first (`serve` its
 `.dev.vars`, made from a `.dev.vars.example` if there is one; `cloudflare:connect-github` cf's `.cloudflare/`), and wrangler itself names a
 required secret it has no value for.
 
-To upgrade: `mise run cloudflare:update` moves the pin (with every other), then `mise run cloudflare:init` writes
-`init`'s files again; or name the release: `mise use --path .mise/config.toml github:joeblew999/mise-cloudflare@<version>`.
+To upgrade: `mise run mise-check:update` moves the pin (with every other: mise's tools, the packages, Go), then
+`mise run cloudflare:init` writes `init`'s files again; or name the release: `mise use --path .mise/config.toml github:joeblew999/mise-cloudflare@<version>`.
 mise holds back a tool's release for a day after it's published (its minimum release age), but `.mise/config.toml`
 takes mise-cloudflare at its newest release the minute it's out (in `minimum_release_age_excludes`, where each tool's
 `init` adds its own name and nothing is removed; and `use_versions_host = false`, so `latest` is GitHub's own newest).
@@ -125,7 +127,6 @@ them, `cloudflare:delete`, `cloudflare:logout` and `cloudflare:clean`.
 | `cloudflare:login` / `cloudflare:logout` | The repo's login (the others make it when they need it); logout deletes it, and cf's | Allow, to log in |
 | `cloudflare:clean` | The local state undone, as `cloudflare:delete` undoes Cloudflare's: `.wrangler/` (the local D1, KV and R2, and what deploys wrote) and `.dev.vars`, so the next `cloudflare:serve` starts from nothing. It asks first; `--yes` doesn't | y, to be sure |
 | `cloudflare:template` | The template's own Worker, in a repo with none yet, named for the repo's folder, with the `mise.toml` that installs its wrangler. It never writes over a file | Nothing |
-| `cloudflare:update` | The repo's own pins at their newest releases, nothing outside it, by [mise-check](https://github.com/joeblew999/mise-check) (`mise-check update`, pinned beside mise-cloudflare in `.mise/config.toml`): its mise tools, its packages (aube, whichever lockfile the repo has) and its Go and Go modules, majors too, then `cloudflare:init` if mise-cloudflare moved (at `local` it stays). A release younger than 7 days is skipped, but the owner's own modules move at once. `--no-major` takes no majors; `--json` gives every pin before and after. What changed is in git: the steps prove it | Nothing |
 | `cloudflare:init` | After upgrading mise-cloudflare: init's files written again. The first time, before there are tasks: `mise exec github:joeblew999/mise-cloudflare@latest -- mise-cloudflare init` | Nothing |
 | `cloudflare:show-version` | This build's version | Nothing |
 | `cloudflare:show-help` | Every command | Nothing |
@@ -135,7 +136,8 @@ them, `cloudflare:delete`, `cloudflare:logout` and `cloudflare:clean`.
 | File | What |
 |---|---|
 | `.mise/tasks/mise-cloudflare.toml` | The tasks, `mise run cloudflare` and `cloudflare:<command>` (mise finds them there by itself) |
-| `.mise/config.toml` | mise-cloudflare's pin, at the release that ran `init`, and mise-check's, which `cloudflare:update` runs: written once, then the repo's (`cloudflare:update` moves them; `init` brings its own parts, its pin and its settings, to what its release writes, and adds mise-check's pin to one without it) |
+| `.mise/config.toml` | mise-cloudflare's pin, at the release that ran `init`: written once, then the repo's (`mise run mise-check:update` moves it; `init` brings its own parts, its pin and its settings, to what its release writes). mise-check's `init` adds its own pin and settings beside them |
+| mise-check's files: `.mise/tasks/mise-check.toml`, `docs/mise-check/README.md`, its workflow, skill and hook | Written by mise-check's own `init`, which `init` runs: the repo's pins move by `mise run mise-check:update` |
 | `docs/mise-cloudflare/README.md` | This page |
 | `.github/workflows/cloudflare.yml` | Checks the repo on every push and pull request |
 | `.claude/skills/cloudflare/SKILL.md` | The agent skill: how Claude works on the Worker |
@@ -229,7 +231,7 @@ there to click Allow, and Cloudflare's Workers Builds deploys.
 | `refusing: .env sets a Cloudflare token or key` | Remove that line from the file, or name it so wrangler doesn't read it |
 | `wrangler isn't installed here` | Install the repo's dependencies: `package.json` pins wrangler |
 | `npm warn install-scripts` (npm 11) | npm holds back packages' install scripts until you approve them (`npm install-scripts ls`); wrangler ran without its own (workerd's, esbuild's), dev and deploy both |
-| `the repo's wrangler, … has no auth profiles` | An older wrangler (4.49.0 is one) can't hold the repo's login: move it to a newer one, `mise run cloudflare:update` (it moves every pin; `mise use aube` first if it says so). `cloudflare:serve` still runs local bindings on it |
+| `the repo's wrangler, … has no auth profiles` | An older wrangler (4.49.0 is one) can't hold the repo's login: move it to a newer one, `mise run mise-check:update` (it moves every pin; `mise use aube` first if it says so). `cloudflare:serve` still runs local bindings on it |
 | `… still don't match the repo's` | The person approved other permissions or another account: `mise run cloudflare:logout`, then log in again |
 | A `mise run cloudflare:check` problem | Fix the repo; never weaken the rule |
 

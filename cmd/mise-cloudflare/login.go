@@ -77,7 +77,7 @@ func (r repo) noProfiles(ctx context.Context) []string {
 	if r.w.HasProfiles(ctx) {
 		return nil
 	}
-	return []string{fmt.Sprintf("the repo's wrangler, %s, has no auth profiles (wrangler auth), which this repo's login is: move it to a newer one (mise run cloudflare:update moves every pin), then this again", r.w.Version())}
+	return []string{fmt.Sprintf("the repo's wrangler, %s, has no auth profiles (wrangler auth), which this repo's login is: move it to a newer one (mise run mise-check:update moves every pin), then this again", r.w.Version())}
 }
 
 // strayVars are what wrangler takes over any login: an API token, CLOUDFLARE_API_TOKEN or CF_API_TOKEN (its old name,

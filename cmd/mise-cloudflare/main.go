@@ -16,6 +16,8 @@ import (
 	"runtime/debug"
 	"strings"
 
+	"github.com/joeblew999/mise-check/toolfiles"
+
 	"github.com/joeblew999/mise-cloudflare/internal/rules"
 	"github.com/joeblew999/mise-cloudflare/internal/wconfig"
 	"github.com/joeblew999/mise-cloudflare/internal/wrangler"
@@ -43,10 +45,11 @@ The steps, in the order a repo takes them (mise run cloudflare says which is nex
 And:
   mise run cloudflare:verify         what the repo's GitHub workflow runs: its setup and test tasks, then check
   mise run cloudflare:run-wrangler   any other wrangler command, on the repo's login: d1 list
-  mise run cloudflare:update         the repo's own pins at their newest releases, by mise-check: mise's tools, packages, Go
   mise run cloudflare:template       the template's own Worker, in a repo with none yet: it never writes over a file
   mise run cloudflare:show-version   this build's version
   mise run cloudflare:show-help      this
+
+The repo's pins move by mise-check's own tasks, which init gives it: mise run mise-check:update.
 `
 
 func main() {
@@ -83,9 +86,10 @@ func main() {
 	case "show-help":
 		showHelp()
 		return
-	case "init":
+	case "init": // mise-cloudflare's files, then mise-check's own, by its init: a repo runs mise run mise-check:<command> itself
 		initRepo(dir)
-		trustConfig(dir, ".mise/config.toml")
+		must(toolfiles.MiseCheckInit(dir))
+		toolfiles.Trust(dir, ".mise/config.toml", nil)
 		sayNewest()
 		return
 	case "template": // a repo with no Worker yet; it never writes over a file, so it runs in CI too (the walk there makes a new repo with it)

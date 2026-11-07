@@ -10,6 +10,16 @@
           }
         ],
         "matcher": "startup"
+      },
+      {
+        "hooks": [
+          {
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/mise-check-session-start.sh .",
+            "timeout": 600,
+            "type": "command"
+          }
+        ],
+        "matcher": "startup"
       }
     ]
   }

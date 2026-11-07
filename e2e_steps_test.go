@@ -11,10 +11,10 @@ import (
 	"github.com/joeblew999/mise-check/walk"
 )
 
-// steps are the repo's numbered tasks (its .mise/tasks/mise-cloudflare.toml, which is the template's,
-// templates/.mise/tasks/mise-cloudflare.toml), in their order, each with the first stage that runs it and its check: how
-// the walk runs it and checks it did what it says, as a person would see it. TestSteps fails unless they're exactly the
-// template's numbered tasks, in their order.
+// steps are the repo's step tasks (its .mise/tasks/mise-cloudflare.toml, which is the template's,
+// templates/.mise/tasks/mise-cloudflare.toml), in the order a person takes them (the docs page's, and what mise run
+// cloudflare says next), each with the first stage that runs it and its check: how the walk runs it and checks it did
+// what it says, as a person would see it. TestSteps fails unless they and notWalked are exactly the template's tasks.
 var steps = []walk.Step[*walker]{
 	{Task: "cloudflare:init", Stage: int(serve), Check: func(w *walker) {
 		before := w.Snapshot(local...)

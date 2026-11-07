@@ -24,9 +24,9 @@ config, whatever is in it: the repo's own pinned wrangler reads the config, runs
 never parses one. One command adds it to a repo, and from then on every step is a mise task, named for what it does
 (`cloudflare:deploy`), in the order the docs give. Each one says what it did and what to run next, and `mise run
 cloudflare` shows where the repo is at any time. The logins are wrangler's and cf's own, made once per machine when you
-click **Allow**; GitHub never holds a Cloudflare credential. Every version is pinned, and one task, `mise run
-cloudflare:update`, moves them all, by [mise-check](https://github.com/joeblew999/mise-check), whose job pins are. CI
-checks it on macOS, Linux and Windows, and it sets itself up in a Claude Code cloud session.
+click **Allow**; GitHub never holds a Cloudflare credential. Every version is pinned, and one task moves them all,
+[mise-check](https://github.com/joeblew999/mise-check)'s own `mise run mise-check:update`: `init` gives the repo
+mise-check's tasks, whose job pins are. CI checks it on macOS, Linux and Windows, and it sets itself up in a Claude Code cloud session.
 
 ## Use it in your repo
 
@@ -44,7 +44,8 @@ that's new or has a Worker of its own (a wrangler config, and wrangler in its `p
    It runs the newest release, or the one you name instead of `latest` (`@0.1.15`: they're all on
    [its releases](https://github.com/joeblew999/mise-cloudflare/releases)); mise takes a new release as `latest` once
    it's a day old. It writes the repo's `.mise/` folder (its tasks, and mise-cloudflare pinned at exactly that release,
-   which mise gets from GitHub), its GitHub workflow, its Claude Code hook and skill, its docs and its `.gitignore`.
+   which mise gets from GitHub), its GitHub workflow, its Claude Code hook and skill, its docs and its `.gitignore`;
+   then mise-check's own `init`, so the repo has mise-check's tasks (`mise run mise-check:update` moves every pin).
 3. **The template's Worker, only in a repo with none yet:**
 
    ```sh
@@ -97,7 +98,7 @@ What's proven and where:
   Platforms (#23). The open work is the repo's [issues](https://github.com/joeblew999/mise-cloudflare/issues).
 
 The repo's login is a wrangler auth profile, which older wranglers (4.49.0) don't have: on one, `cloudflare:serve` still runs
-its local bindings, and `cloudflare:check` says to move it (`mise run cloudflare:update` moves every pin).
+its local bindings, and `cloudflare:check` says to move it (`mise run mise-check:update` moves every pin).
 
 ## Working on mise-cloudflare
 
@@ -146,7 +147,7 @@ Every task is named noun:verb, what it acts on and then what it does, as a repo'
 | `template:e2e-deploy` | The walk on the template, as far as `deploy`: about 3 minutes | After a change to how it deploys | Yes |
 | `template:e2e-connect-github` | The walk on the template, as far as `connect-github`: about 7 minutes (it waits on Cloudflare's builds) | After a change to `connect-github` | Yes, and GitHub |
 | `template:check-mise` | `TestTemplateMise` on the template's mise file, the tool's Go, the walk and the skill, both ways | After a change to a task, a command or the skill | No |
-| `template:update` | The template's pins at their newest, by its own `cloudflare:update` (mise-check's update): each moved one before → after | To move its pins; then the walks | No |
+| `template:update` | The template's pins at their newest, by mise-check's own tasks there (`mise-check:update`, then `mise-check:init`): each moved one before → after | After the root's `mise-check:update`, to move its pins; then the walks | No |
 | `new-repo:e2e-serve` | The walk on a new repo, as far as `serve` (`--version` pins a release) | After every change | No |
 | `new-repo:e2e-deploy` | The walk on a new repo, as far as `deploy` | After a change to how it deploys | Yes |
 | `new-repo:e2e-extras` | `new-repo:e2e-deploy` with the extras | After a change to `cloudflare:delete`, `cloudflare:serve` or previews | Yes |
@@ -157,7 +158,9 @@ Every task is named noun:verb, what it acts on and then what it does, as a repo'
 | `tool:install` | That build as the mise version `local`, for any repo on this machine (`mise use github:joeblew999/mise-cloudflare@local` there) and the template's (`templates/.mise/config.local.toml`, never committed) | To try a change in another repo, never by waiting on a release | No |
 | `tool:test` | `go vet`, the Go tests, the release config | After every change | No |
 | `tool:release` | A release from the commit checked out, as `release.yml` runs it; `--dry-run` tags and publishes nothing | Never by hand: a merge to main runs it | GitHub |
-| `root:check-mise` | `TestRootMise` on this repo's own `mise.toml`, its mise side: one line each, the Go it runs there, `usage` passed by name, no POSIX shell syntax, so every task runs on Windows too | After a change to this repo's tasks | No |
+| `root:ci` | Exactly what GitHub's CI runs (`ci.yml` runs only this): `root:verify` | Before every push | No |
+| `root:verify` | The checks and the walks that need no account: `template:setup`, `root:check-mise` and `template:check-mise`, then `tool:test`, `repos:check`, `template:e2e-serve` and `new-repo:e2e-serve` | After every change | No |
+| `root:check-mise` | `TestRootMise` on this repo's own `mise.toml`, its mise side: one line each, the Go it runs there, `usage` passed by name, no POSIX shell syntax, so every task runs on Windows too; and the repo held to every mise tool repo's shape (`misecheck.CheckToolRepo`) | After a change to this repo's tasks | No |
 
 This repo's pins, and the rules on its mise files, are [mise-check](https://github.com/joeblew999/mise-check)'s, through
 its own tasks, which `mise-check init` wrote into `.mise/` (`.mise/config.toml` pins it, at the release `go.mod`
@@ -201,7 +204,7 @@ It walks five kinds of repo:
 - **A third-party Worker, adopted** (`repos:e2e-adopt repos/cloudflare/realtime-examples/video-to-jpeg`): its folder,
   as `repos:check` cloned it, copied into a repo of its own with its own git, then `mise-cloudflare init`, its own
   install by its lockfile, and its wrangler moved as the tool says when it has no auth profiles (`mise use aube`,
-  `cloudflare:update`). Then the steps on its own wrangler, its checks being what a stranger's Worker can be held to:
+  `mise-check:update`). Then the steps on its own wrangler, its checks being what a stranger's Worker can be held to:
   it answers, locally and live, and nothing of it, its Durable Objects among them, is left on Cloudflare.
 
 Each walk first says what it runs: the repo's mise tools, mise-cloudflare's build, the installed wrangler. It runs in
@@ -229,13 +232,13 @@ it isn't a binary's tasks.
 
 | Path | Whose | What |
 |---|---|---|
-| [templates/](templates/) | other repos' | the template: a sample Worker plus the tool's half, which `init` writes into a repo at the same paths (the tasks, the workflow, the Claude Code hook and settings, the agent skill, the docs, the `.gitignore`); [templates.go](templates/templates.go) lists that half |
+| [templates/](templates/) | other repos' | the template: a sample Worker plus the tool's half, which `init` writes into a repo at the same paths (the tasks, the workflow, the Claude Code hook and settings, the agent skill, the docs, the `.gitignore`), through mise-check's `toolfiles`, and mise-check's own files as its `init`, which `init` runs, writes them; [templates.go](templates/templates.go) lists the halves |
 | [cmd/mise-cloudflare/](cmd/mise-cloudflare/) | other repos' | the command: a file per command, `x.go` holding `r.x`, which `main.go`'s `case "x"` calls |
 | [internal/](internal/) | other repos' | the login (`wrangler`), Cloudflare's cf (`cf`), Cloudflare's API decided on its status (`cfapi`), the Worker's config as wrangler reads it (`wconfig`), the rules (`rules`) |
 | [e2e_walk_test.go](e2e_walk_test.go), [e2e_steps_test.go](e2e_steps_test.go), [e2e_mise_test.go](e2e_mise_test.go), [e2e_cloudflare_test.go](e2e_cloudflare_test.go), [e2e_bindings_test.go](e2e_bindings_test.go) | this repo's | the walk, on [mise-check's `walk`](https://github.com/joeblew999/mise-check#use-walk), which runs the steps in their order and does everything that isn't Cloudflare's: the walk tests and their stages; the steps, each with its check; what's Cloudflare's in making a repo (a new one, an adopted Worker, a checkout of `HEAD`); what it looks at on Cloudflare; the extras |
-| [tool_test.go](tool_test.go) | this repo's | `TestToolRelease`, the release: only `mise run tool:release` runs it |
+| [tool_test.go](tool_test.go) | this repo's | `TestToolRelease`, the release, by mise-check's `release`: only `mise run tool:release` runs it |
 | [repos.txt](repos.txt), `repos/` | this repo's | the corpus's repos, and their clones (git-ignored) |
-| [mise_test.go](mise_test.go) | this repo's | `TestRootMise` and `TestTemplateMise`: [mise-check's `misecheck`](https://github.com/joeblew999/mise-check) on a mise file of this repo and the Go it runs, both ways |
+| [mise_test.go](mise_test.go) | this repo's | `TestRootMise` and `TestTemplateMise`: [mise-check's `misecheck`](https://github.com/joeblew999/mise-check) on a mise file of this repo and the Go it runs, both ways, and the repo's shape (`CheckToolRepo`) |
 | [.mise/](.mise/), [docs/mise-check/](docs/mise-check/), [.claude/](.claude/), [.github/workflows/mise-check.yml](.github/workflows/mise-check.yml) | this repo's | mise-check's, as `mise-check init` writes them into any repo: its tasks and its pin, its docs, its Claude Code hook and skill, its workflow |
 | [.github/workflows/](.github/workflows/) | this repo's | its own workflows; other repos get theirs from `templates/` |
 
@@ -244,9 +247,8 @@ it isn't a binary's tasks.
 Shell steps only, no JavaScript actions, and no Cloudflare credentials. Each workflow checks out and installs mise,
 then only runs the root mise, as on any machine:
 
-- [ci.yml](.github/workflows/ci.yml), on every push and pull request (not the walk's throwaway `e2e-*` branches), on
-  Linux, macOS and Windows: `template:setup`, `tool:test`, `template:check-mise`, `root:check-mise`, `repos:check`,
-  then `template:e2e-serve` and `new-repo:e2e-serve`.
+- [ci.yml](.github/workflows/ci.yml), on every push to main and every pull request, on Linux, macOS and Windows:
+  `mise run root:ci`, and nothing else, so CI is what `root:ci` is on any machine.
 - [release.yml](.github/workflows/release.yml), on every change to the tool merged to main: `tool:release`. It takes
   the commit's `v*` tag or tags the next patch version, [goreleaser](.goreleaser.yaml) puts the `mise-cloudflare`
   binary for macOS, Linux and Windows on the release, a copy stamped out pinning that release is walked

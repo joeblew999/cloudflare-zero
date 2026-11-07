@@ -4,8 +4,11 @@
 // workflow, the Claude Code hook and its settings, the agent skill, the docs and the .gitignore. The rest is the
 // template's own Worker (src/, wrangler.jsonc, package.json and its lockfile, mise.toml with what installs its
 // wrangler, .dev.vars.example, README.md), there so the template runs: init never writes it, and mise-cloudflare
-// template writes it into a repo that has no Worker yet. What is for this repo itself (its own mise.toml, tests, CI
-// and README) is never here, and neither is the machine's own .mise/config.local.toml.
+// template writes it into a repo that has no Worker yet. mise-check's files (its tasks, workflow, skill, hook and
+// docs, and its parts of .mise/config.toml, .gitignore and .claude/settings.json) are its own init's, which
+// mise-cloudflare init runs: they're here as that init writes them, so the template is a repo after init. What is for
+// this repo itself (its own mise.toml, tests, CI and README) is never here, and neither is the machine's own
+// .mise/config.local.toml.
 package templates
 
 import (
@@ -15,7 +18,7 @@ import (
 
 //go:embed .mise/tasks/mise-cloudflare.toml .mise/config.toml
 //go:embed .github/workflows/cloudflare.yml
-//go:embed .claude/hooks/mise-cloudflare-session-start.sh .claude/settings.json .claude/skills
+//go:embed .claude/hooks/mise-cloudflare-session-start.sh .claude/settings.json .claude/skills/cloudflare
 //go:embed docs/mise-cloudflare
 //go:embed .gitignore
 var tool embed.FS

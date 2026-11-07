@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/joeblew999/mise-check/toolfiles"
+
 	"github.com/joeblew999/mise-cloudflare/templates"
 )
 
@@ -74,7 +76,7 @@ func templateRepo(dir string) bool {
 // setUpWorker installs the Worker template wrote: mise trusts its mise.toml, then the repo's own setup task installs
 // its wrangler (mise installs node and aube for it first). Without a setup task, it says how instead.
 func setUpWorker(ctx context.Context, dir string) {
-	trustConfig(dir, "mise.toml")
+	toolfiles.Trust(dir, "mise.toml", nil)
 	has := exec.CommandContext(ctx, "mise", "tasks", "info", "setup")
 	has.Dir = dir
 	if has.Run() != nil {
@@ -90,18 +92,15 @@ func setUpWorker(ctx context.Context, dir string) {
 	fmt.Println("✓ next: mise run cloudflare")
 }
 
-// trustConfig has mise trust a config file mise-cloudflare wrote into the repo, so its tasks run straight away: mise
-// asks first about a config file it hasn't seen. Without mise on PATH, it says what to run.
-func trustConfig(dir, file string) {
-	path := filepath.Join(dir, filepath.FromSlash(file))
-	if _, err := os.Stat(path); err != nil {
+// writeFile writes b to path, saying so, unless it's there already as it is.
+func writeFile(path string, b []byte) {
+	if old, err := os.ReadFile(path); err == nil && bytes.Equal(old, b) {
+		fmt.Printf("✓ %s is up to date\n", path)
 		return
 	}
-	if out, err := exec.Command("mise", "trust", "-q", path).CombinedOutput(); err != nil {
-		fmt.Printf("mise didn't trust %s (%v %s): run mise trust %s\n", file, err, strings.TrimSpace(string(out)), file)
-		return
-	}
-	fmt.Printf("✓ %s trusted by mise\n", file)
+	must(os.MkdirAll(filepath.Dir(path), 0o755))
+	must(os.WriteFile(path, b, 0o644))
+	fmt.Println("wrote", path)
 }
 
 // workerName is a folder's name as a Worker's: lowercase letters, digits and dashes, at most 63 characters.

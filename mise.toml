@@ -7,7 +7,7 @@
 #     mise run template:e2e-serve      TestWalkTemplate on it, as far as the stage serve (-args -stage serve)
 #     mise run template:e2e-deploy     TestWalkTemplate on it, as far as the stage deploy, on Cloudflare (-stage deploy)
 #     mise run template:e2e-connect-github  TestWalkTemplate on it, as far as connect-github, through GitHub (about 7 minutes)
-#     mise run template:update         its own pins at their newest releases, by its own task (cloudflare:update)
+#     mise run template:update         its own pins at their newest releases, by mise-check's own tasks there (mise-check:update)
 #     mise run template:setup          its own setup (mise run setup there): its pinned wrangler, which tool:test reads configs with
 #   repos: third-party repos with wrangler configs, repos.txt's, cloned into repos/ (git-ignored)
 #     mise run repos:check             every wrangler config in them read by the bridge, with our wrangler (or the repos named)
@@ -24,7 +24,10 @@
 #     mise run tool:test               its own checks: go vet, its Go tests, the release config (no account needed)
 #     mise run tool:release            a release from the commit checked out, as release.yml runs it (--dry-run)
 #   root: this repo itself
-#     mise run root:check-mise         TestRootMise on this file: one line each, its Go there, usage by name, no POSIX shell syntax
+#     mise run root:ci                 exactly what GitHub's CI runs (ci.yml runs only this): root:verify
+#     mise run root:verify             the checks and the walks that need no Cloudflare account, before every push
+#     mise run root:check-mise         TestRootMise on this file (one line each, its Go there, usage by name, no POSIX shell
+#                                      syntax) and the repo's shape as a mise tool repo's (misecheck.CheckToolRepo)
 # Each runs what it needs first: run the furthest you need.
 #
 # This repo's pins are mise-check's, by its own tasks in .mise/, which mise-check init wrote: mise run mise-check.
@@ -61,14 +64,23 @@ depends = ["tool:install"]
 run = 'go test . -run "^TestWalkTemplate$" -count=1 -v -timeout 90m -args -stage connect-github'
 
 [tasks."template:update"]
-description = "The template's own pins at their newest releases, by its own task, cloudflare:update, run in templates/ as in a repo on its own (MISE_CEILING_PATHS): node, aube, wrangler, and mise-cloudflare's release pin in .mise/config.toml (the machine's .mise/config.local.toml ignored). It ends with every pin, the moved ones before → after. Then the walks prove it. After tool:install"
+description = "The template's own pins at their newest releases, by mise-check's own tasks there (which mise-cloudflare init gives every repo), run in templates/ as in a repo on its own (MISE_CEILING_PATHS): mise-check:update moves node, aube, wrangler and mise-check's pin (mise-cloudflare's stays latest; the machine's .mise/config.local.toml ignored), then mise-check:init writes mise-check's files there as that release does. After the root's own mise-check:update, so the template's mise-check is the one go.mod requires, which init runs. Then the walks prove it. After tool:install"
 depends = ["tool:install"]
 dir = "{{config_root}}/templates"
 env = { MISE_CEILING_PATHS = "{{config_root}}", MISE_IGNORED_CONFIG_PATHS = "{{config_root}}/templates/.mise/config.local.toml" }
-run = "mise run cloudflare:update"
+run = "mise run mise-check:update && mise run mise-check:init"
+
+[tasks."root:ci"]
+description = "Exactly what GitHub's CI runs, on Linux, macOS and Windows (ci.yml runs only this): root:verify. Here the same: run it before every push"
+run = "mise run root:verify"
+
+[tasks."root:verify"]
+description = "The checks and the walks that need no Cloudflare account: template:setup (the wrangler tool:test reads configs with), root:check-mise and template:check-mise at once, then tool:test, repos:check, and the walks one after the other (template:e2e-serve, new-repo:e2e-serve), as they share the machine's one aube store. The walks that deploy, connect-github and adopt are their own tasks, run here before merging a change to what they walk"
+depends = ["template:setup", "root:check-mise", "template:check-mise"]
+run = "mise run tool:test && mise run repos:check && mise run template:e2e-serve && mise run new-repo:e2e-serve"
 
 [tasks."root:check-mise"]
-description = "TestRootMise on this repo's own mise.toml, the mise side: each task one line, the Go it runs there, its usage passed by name, no POSIX shell syntax, so every task here runs on Windows too. Not the Go side: the root runs Go, it isn't a binary's tasks (mise_test.go)"
+description = "TestRootMise on this repo's own mise.toml, the mise side: each task one line, the Go it runs there, its usage passed by name, no POSIX shell syntax, so every task here runs on Windows too; and the repo's shape as every mise tool repo's (misecheck.CheckToolRepo: root:ci and root:verify, ci.yml running only root:ci, the README's opening, no template task running mise-check). Not the Go side: the root runs Go, it isn't a binary's tasks (mise_test.go)"
 run = 'go test . -run "^TestRootMise$" -count=1 -v'
 
 [tasks."new-repo:e2e-serve"]

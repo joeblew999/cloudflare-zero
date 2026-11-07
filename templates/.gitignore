@@ -7,3 +7,7 @@ node_modules/
 .wrangler/
 # mise's override for one machine: mise-cloudflare's own checkout pins its build there (local)
 .mise/config.local.toml
+# Go test caches and editor files
+*.test
+*.out
+.DS_Store

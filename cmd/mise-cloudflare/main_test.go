@@ -17,7 +17,7 @@ import (
 )
 
 // commands is every mise-cloudflare command, in the order of a repo's tasks: the steps, init to clean, then the rest.
-var commands = []string{"init", "check", "show", "serve", "set-secrets", "deploy", "connect-github", "set-preview-secrets", "preview", "login", "delete", "logout", "clean", "verify", "update", "template", "run-wrangler", "show-version", "show-help"}
+var commands = []string{"init", "check", "show", "serve", "set-secrets", "deploy", "connect-github", "set-preview-secrets", "preview", "login", "delete", "logout", "clean", "verify", "template", "run-wrangler", "show-version", "show-help"}
 
 // taskVerb is the command a task's name names: cloudflare:deploy names deploy.
 var taskVerb = regexp.MustCompile(`^cloudflare:([a-z][a-z-]*)$`)
@@ -217,15 +217,18 @@ func TestNotDeleted(t *testing.T) {
 	}
 }
 
-// TestInit: init writes the template's tool half into a repo exactly as the template has it, at the same paths, the
-// hook executable; a .gitignore of the repo's own it leaves as it is. Then nothing is stale. mise-cloudflare's pin it
-// writes once, for the build that ran it.
+// TestInit: init writes the template's tool half into a repo (toolfiles): each file as the template has it, the hook
+// executable; to the repo's own .gitignore only the template's lines it lacks. Then nothing is stale. Its pin is the
+// build that ran it; a release's init brings its parts of another tool's .mise/config.toml to what it writes (its pin
+// moved forward, its own name beside the list's, use_versions_host), the rest left as it is, and then has nothing to
+// write, or to report.
 func TestInit(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("dist/\n"), 0o644)
 	initRepo(dir)
+	own := map[string]bool{".mise/config.toml": true, ".gitignore": true, ".claude/settings.json": true}
 	fs.WalkDir(templates.Tool, ".", func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || theirs[p] {
+		if err != nil || d.IsDir() || own[p] {
 			return err
 		}
 		want, _ := fs.ReadFile(templates.Tool, p)
@@ -237,35 +240,22 @@ func TestInit(t *testing.T) {
 	if st, err := os.Stat(filepath.Join(dir, ".claude", "hooks", templates.HookFile)); err != nil || runtime.GOOS != "windows" && st.Mode()&0o100 == 0 { // Windows has no executable bit
 		t.Errorf("the hook isn't executable: %v %v", st, err)
 	}
-	if b, _ := os.ReadFile(filepath.Join(dir, ".gitignore")); string(b) != "dist/\n" {
-		t.Errorf("the repo's own .gitignore was written: %q", b)
+	if b, _ := os.ReadFile(filepath.Join(dir, ".gitignore")); !strings.HasPrefix(string(b), "dist/\n") || !strings.Contains(string(b), ".dev.vars") {
+		t.Errorf("the repo's own .gitignore, with the template's lines: %q", b)
 	}
-	if b, _ := os.ReadFile(filepath.Join(dir, ".claude", "settings.json")); !bytes.Contains(b, []byte(templates.HookFile)) {
-		t.Errorf("settings.json doesn't run the hook:\n%s", b)
-	}
-	if got := (repo{dir: dir}).stale(context.Background()); len(got) > 0 {
-		t.Errorf("stale right after init: %q", got)
-	}
-	// .mise/config.toml pins the build that ran init (this test's, a checkout's: local), and is the repo's from then on.
 	config := filepath.Join(dir, ".mise", "config.toml")
 	if b, _ := os.ReadFile(config); !bytes.Equal(b, must2(configTool().Pinned())) || !bytes.Contains(b, []byte(`"`+self+`" = "local"`)) {
 		t.Errorf(".mise/config.toml doesn't pin this build, local:\n%s", b)
 	}
-	os.WriteFile(config, []byte("[tools]\n\"github:joeblew999/mise-cloudflare\" = \"0.0.1\"\n"), 0o644)
-	initRepo(dir)
-	if b, _ := os.ReadFile(config); !bytes.Contains(b, []byte(`= "0.0.1"`)) {
-		t.Errorf("init wrote over the repo's own pin:\n%s", b)
+	if got := (repo{dir: dir}).stale(context.Background()); len(got) > 0 {
+		t.Errorf("stale right after init: %q", got)
 	}
-	// A release's init brings its parts of another tool's file to what it writes (miseconfig): its pin moved forward,
-	// its own name beside the list's, use_versions_host, and mise-check's pin; the rest, the other's comment at the top
-	// among it, stays. Then there's nothing to write, or to report.
 	defer func(v string) { version = v }(version)
 	version = "v0.1.36"
-	own := "# mise-check for this repo\n\n[settings]\nminimum_release_age_excludes = [\"npm:x\"]\n\n[tools]\n\"" + self + "\" = \"0.1.7\"\n"
-	os.WriteFile(config, []byte(own), 0o644)
+	os.WriteFile(config, []byte("# mise-check for this repo\n\n[settings]\nminimum_release_age_excludes = [\"npm:x\"]\n\n[tools]\n\""+self+"\" = \"0.1.7\"\n"), 0o644)
 	initRepo(dir)
 	b, _ := os.ReadFile(config)
-	for _, part := range []string{"# mise-check for this repo\n", `["npm:x", "` + self + `"]`, "use_versions_host = false", `"` + self + `" = "0.1.36"`, `"` + miseCheck + `" = "latest"`} {
+	for _, part := range []string{"# mise-check for this repo\n", `["npm:x", "` + self + `"]`, "use_versions_host = false", `"` + self + `" = "0.1.36"`} {
 		if !strings.Contains(string(b), part) {
 			t.Errorf("init didn't keep %q in the repo's own .mise/config.toml:\n%s", part, b)
 		}

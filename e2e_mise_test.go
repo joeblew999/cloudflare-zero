@@ -151,7 +151,7 @@ func (r repo) miseInit(at string) {
 // adoptedCopy is a third-party Worker of the corpus (its folder in a repos:check clone) adopted as its owner would: a
 // copy in a repo of its own (its own git, in a folder that goes when the walk ends), mise-cloudflare init at this
 // checkout's build, its dependencies installed its own way (its lockfile's command), and its wrangler moved as the tool
-// says when it has no auth profiles (mise use aube, then cloudflare:update).
+// says when it has no auth profiles (mise use aube, then mise-check:update).
 func (r repo) adoptedCopy() repo {
 	r.T.Helper()
 	if _, err := os.Stat(filepath.Join(r.Dir, "package.json")); err != nil {
@@ -174,11 +174,11 @@ func (r repo) adoptedCopy() repo {
 	n.Pass("%s: %s copied into a repo of its own with its own git, mise-cloudflare init at local, then its own install (%s)", n.Name, r.Name, install)
 	if !n.miseShowJSON().Profiles {
 		n.Must("mise", "use", "aube")
-		n.MustTask("cloudflare:update")
+		n.MustTask("mise-check:update")
 		if !n.miseShowJSON().Profiles {
-			r.T.Fatal("cloudflare:update didn't move its wrangler to one with auth profiles")
+			r.T.Fatal("mise-check:update didn't move its wrangler to one with auth profiles")
 		}
-		n.Pass("its wrangler had no auth profiles, as cloudflare:check says: moved as the tool says (mise use aube, cloudflare:update)")
+		n.Pass("its wrangler had no auth profiles, as cloudflare:check says: moved as the tool says (mise use aube, mise-check:update)")
 	}
 	return n
 }

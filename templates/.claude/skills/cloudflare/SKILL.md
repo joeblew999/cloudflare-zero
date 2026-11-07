@@ -39,7 +39,6 @@ of its name (`mise run cloudflare:deploy` runs `mise-cloudflare deploy`).
 | `mise run cloudflare` | first, and whenever you're unsure | what's done for this Worker, and what to run next |
 | `mise run cloudflare:verify` | before every push | what `.github/workflows/cloudflare.yml` runs on GitHub: the repo's `setup` and `test`, then check |
 | `mise run cloudflare:run-wrangler` | for any other wrangler command | wrangler on the repo's login, the command passed on as it is: `d1 list`, `secret put NAME`, `tail` |
-| `mise run cloudflare:update` | when the person asks to upgrade | every pin at its newest, by mise-check: mise's tools, the packages (aube), Go and Go modules |
 | `mise run cloudflare:template` | only in a repo with no Worker yet | the template's Worker, named for the repo's folder; it never writes over a file |
 | `mise run cloudflare:show-version` | to say which mise-cloudflare this is | its version |
 | `mise run cloudflare:show-help` | to list every command | every command |
@@ -47,7 +46,7 @@ of its name (`mise run cloudflare:deploy` runs `mise-cloudflare deploy`).
 ## Flags and arguments
 
 - `--json`: one JSON document on stdout instead of text, on `mise run cloudflare`, `cloudflare:check`, `cloudflare:show`,
-  `cloudflare:connect-github` and `cloudflare:login`, and on `cloudflare:update` every pin before and after. Read that, never the text.
+  `cloudflare:connect-github` and `cloudflare:login`. Read that, never the text.
 - `--yes`: on `cloudflare:delete` and `cloudflare:clean`, don't ask first. Pass it only when the person has said to delete.
 - `--off`: on `cloudflare:connect-github`, turn Workers Builds off: its setup and the previews' resources deleted.
 - `--branch <branch>`: on `cloudflare:connect-github`, the branch whose pushes deploy production (default the repository's
@@ -55,7 +54,6 @@ of its name (`mise run cloudflare:deploy` runs `mise-cloudflare deploy`).
 - `--staging <branch>`: on `cloudflare:connect-github`, a branch whose pushes deploy the wrangler environment `env.staging`
   (`--staging main`).
 - `--build <command>`: on `cloudflare:connect-github`, the build command (default installing from the lockfile).
-- `--no-major`: on `cloudflare:update`, no major moves.
 - Arguments after `cloudflare:serve`, `cloudflare:deploy`, `cloudflare:preview` and `cloudflare:run-wrangler` go to wrangler as they are:
   `mise run cloudflare:serve --port 8787`, `mise run cloudflare:preview --name my-test`.
 
@@ -69,7 +67,7 @@ message, so they open it on any device. CI never deploys: Workers Builds does, a
   wrangler through `mise run cloudflare:run-wrangler`.
 - Never create, ask for or store a Cloudflare API token.
 - Never click Allow for the person, and never pass `--yes` without their say.
-- Never upgrade a pin by hand: `mise run cloudflare:update`.
+- Never upgrade a pin by hand: `mise run mise-check:update` (mise-check's own task, which init gives the repo).
 - Never edit what `mise run cloudflare:init` writes: `.mise/tasks/mise-cloudflare.toml`, `docs/mise-cloudflare/`,
   this skill, `.github/workflows/cloudflare.yml` and the Claude Code hook. After upgrading mise-cloudflare, run
   `mise run cloudflare:init`, which writes them again.

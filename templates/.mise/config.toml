@@ -1,17 +1,18 @@
-# mise-cloudflare for this repo, from its GitHub releases: mise install gets it, and mise-check, which cloudflare:update
-# runs. mise-cloudflare init writes this file when the repo has none, pinning exactly the release that ran it (here in
-# the template it's latest), and adds its parts (its pin, its settings below) and mise-check's pin to one that lacks
-# them; from then on the pins are the repo's (mise run cloudflare:update moves them). A .mise/config.local.toml beside
-# it, never committed, overrides it on one machine: mise-cloudflare's own checkout pins its build there (local).
+# mise-cloudflare for this repo, from its GitHub releases: mise install gets it. mise-cloudflare init writes this file
+# when the repo has none, pinning exactly the release that ran it (here in the template it's latest), and brings its
+# parts (its pin, its settings below) to what its release writes in one the repo has; from then on the pin is the
+# repo's (mise run mise-check:update moves it). mise-check's own init, which mise-cloudflare init runs, adds its pin
+# and its name beside them. A .mise/config.local.toml beside it, never committed, overrides it on one machine:
+# mise-cloudflare's own checkout pins its build there (local).
 
 [settings]
 # The tools this repo takes the minute a release is out, never held back a day as every other tool's are
 # (minimum_release_age): latest is their newest release. Each tool's init adds its own name here, beside the others'.
-minimum_release_age_excludes = ["github:joeblew999/mise-cloudflare"]
+minimum_release_age_excludes = ["github:joeblew999/mise-cloudflare", "github:joeblew999/mise-check"]
 # latest from GitHub's own list of releases, not mise's versions host, which lists a release some time after it's
 # out. Each tool's init adds this too.
 use_versions_host = false
 
 [tools]
+"github:joeblew999/mise-check" = "0.4.35"
 "github:joeblew999/mise-cloudflare" = "latest"
-"github:joeblew999/mise-check" = "latest"

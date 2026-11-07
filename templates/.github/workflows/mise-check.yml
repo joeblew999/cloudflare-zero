@@ -1,0 +1,53 @@
+# Written by mise-check: don't edit it. mise run mise-check:init writes it again after upgrading.
+# Checks the repo on every push and pull request: it checks out, installs mise and the pinned tools (Go from go.mod),
+# then runs mise run mise-check:verify (the repo's setup and test tasks if it has them, then check), the same as on
+# any machine. Shell steps only: no JavaScript actions.
+name: mise-check
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mise-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # mise's GitHub downloads
+      MISE_YES: "1"
+      # A pull request from this repository already ran as a push, so its copy here only says so (and passes); one from
+      # a fork runs every step, read-only. GitHub would show a skipped job as "skipped", and not even by its name.
+      CHECKS: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
+    steps:
+      - name: A pull request from this repository - its push ran this check already
+        if: env.CHECKS != 'true'
+        run: echo "This pull request's branch is in this repository, and its push ran this check already."
+
+      - name: Check out with git (no actions/checkout)
+        if: env.CHECKS == 'true'
+        run: |
+          git init -q .
+          # With the job's own token (contents: read): a private repository can't be fetched without one.
+          git fetch -q --depth 1 "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$GITHUB_SHA"
+          git checkout -q --detach FETCH_HEAD
+          git log --oneline -1
+
+      - name: mise and the pinned tools
+        if: env.CHECKS == 'true'
+        run: |
+          echo "MISE_TRUSTED_CONFIG_PATHS=$PWD" >> "$GITHUB_ENV"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          curl -fsSL https://mise.run | MISE_QUIET=1 sh
+          export PATH="$HOME/.local/bin:$PATH" MISE_TRUSTED_CONFIG_PATHS="$PWD"
+          mise install
+
+      - name: mise run mise-check:verify
+        if: env.CHECKS == 'true'
+        run: mise run mise-check:verify

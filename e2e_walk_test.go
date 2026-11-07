@@ -76,9 +76,20 @@ var (
 // no Allow.
 var logoutFlag = flag.Bool("logout", false, "log out at cloudflare:logout (default keep the login, so the next walk needs no Allow)")
 
-// TestSteps checks that the steps are the template's numbered tasks, in their order, so the walk is that file's walk.
+// TestSteps checks that the walk is the template's tasks file's whole walk: each step a task of it, once, and every
+// other task there in notWalked, with why. The steps' order is steps' own, the docs page's.
 func TestSteps(t *testing.T) {
-	walk.CheckSteps(t, "templates/.mise/tasks/mise-cloudflare.toml", steps)
+	walk.CheckSteps(t, "templates/.mise/tasks/mise-cloudflare.toml", steps, notWalked)
+}
+
+// notWalked are the template's tasks that aren't steps of the walk, each with why.
+var notWalked = map[string]string{
+	"cloudflare":              "it is cloudflare:show, which the walk runs as a step",
+	"cloudflare:verify":       "cloudflare:check's step runs it, from nothing installed, as GitHub does",
+	"cloudflare:template":     "the walk's new repo is made with it (newRepo), before the steps",
+	"cloudflare:run-wrangler": "the walk runs it to look at the account, besides the steps",
+	"cloudflare:show-version": "it only prints the version",
+	"cloudflare:show-help":    "it only prints the commands",
 }
 
 // adoptFlag is a third-party Worker's folder in repos/, as repos:check cloned it, to adopt and walk instead, the test's
